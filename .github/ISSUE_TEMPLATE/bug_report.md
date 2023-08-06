@@ -25,15 +25,15 @@ If applicable, add screenshots to help explain your problem.
 
 **System Info (if dev / build issue):**
 
-- OS: [e.g. iOS]
-- Node version (please ensure you are using 14+)
-- Npm version
+-   OS: [e.g. iOS]
+-   Node version (please ensure you are using 14+)
+-   Npm version
 
 **Browser Info (if display / formatting issue):**
 
-- Device [e.g. Desktop, iPhone6]
-- Browser [e.g. chrome, safari]
-- Version [e.g. 22]
+-   Device [e.g. Desktop, iPhone6]
+-   Browser [e.g. chrome, safari]
+-   Version [e.g. 22]
 
 **Additional context**
 Add any other context about the problem here.
