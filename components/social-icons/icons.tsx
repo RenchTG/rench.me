@@ -59,3 +59,11 @@ export function Mastodon(svgProps: SVGProps<SVGSVGElement>) {
         </svg>
     )
 }
+
+export function CTFTime(svgProps: SVGProps<SVGSVGElement>) {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" {...svgProps}>
+            <path d="M24 0v24H0V0h24Zm-3.077 3.077L7.067 3.076 16 12.816 10.369 19l-2.195-2.612 3.476-3.573-8.574-9.609v17.717h17.847V3.077Z" />
+        </svg>
+    )
+}

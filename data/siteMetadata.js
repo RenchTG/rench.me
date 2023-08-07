@@ -1,22 +1,20 @@
 /** @type {import("pliny/config").PlinyConfig } */
 const siteMetadata = {
-    title: 'Next.js Starter Blog',
-    author: 'Tails Azimuth',
-    headerTitle: 'TailwindBlog',
-    description: 'A blog created with Next.js and Tailwind.css',
+    title: 'rench.dev',
+    author: 'Philip Dobranowski',
+    headerTitle: 'rench.dev',
+    description: 'Your wonderful website description goes here (please come up with one Rench)',
     language: 'en-us',
-    theme: 'system', // system, dark or light
-    siteUrl: 'https://tailwind-nextjs-starter-blog.vercel.app',
-    siteRepo: 'https://github.com/timlrx/tailwind-nextjs-starter-blog',
-    siteLogo: '/static/images/logo.png',
+    theme: 'dark', // system, dark or light
+    siteUrl: 'https://philipdobranowski.com',
+    siteRepo: 'https://github.com/RenchTG/rench.dev',
+    siteLogo: '/static/favicons/icon.png',
     socialBanner: '/static/images/twitter-card.png',
-    mastodon: 'https://mastodon.social/@mastodonuser',
-    email: 'address@yoursite.com',
-    github: 'https://github.com',
-    twitter: 'https://twitter.com/Twitter',
-    facebook: 'https://facebook.com',
-    youtube: 'https://youtube.com',
-    linkedin: 'https://www.linkedin.com',
+    email: 'dobranowskip1@gmail.com',
+    github: 'https://github.com/RenchTG',
+    twitter: 'https://twitter.com/RenchTG',
+    ctftime: 'https://ctftime.org/user/118897',
+    linkedin: 'https://www.linkedin.com/in/philip-dobranowski-17804a204/',
     locale: 'en-US',
     analytics: {
         // If you want to use an analytics provider you have to add it to the
