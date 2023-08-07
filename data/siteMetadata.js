@@ -84,6 +84,7 @@ const siteMetadata = {
         //   indexName: 'docsearch',
         // },
     },
+    themeColor: '#f97316'
 }
 
 module.exports = siteMetadata
