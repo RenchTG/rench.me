@@ -7,7 +7,7 @@ const siteMetadata = {
     language: 'en-us',
     theme: 'dark', // system, dark or light
     siteUrl: 'https://philipdobranowski.com',
-    siteRepo: 'https://github.com/RenchTG/rench.dev',
+    siteRepo: 'https://github.com/RenchTG/rench.me',
     siteLogo: '/static/favicons/icon.png',
     socialBanner: '/static/images/twitter-card.png',
     email: 'dobranowskip1@gmail.com',
