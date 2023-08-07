@@ -1,8 +1,8 @@
 /** @type {import("pliny/config").PlinyConfig } */
 const siteMetadata = {
-    title: 'rench.dev',
+    title: 'rench.me',
     author: 'Philip Dobranowski',
-    headerTitle: 'rench.dev',
+    headerTitle: 'rench.me',
     description: 'Your wonderful website description goes here (please come up with one Rench)',
     language: 'en-us',
     theme: 'dark', // system, dark or light
