@@ -12,7 +12,9 @@ import ScrollTopAndComment from '@/components/ScrollTopAndComment'
 
 const editUrl = (path) => `${siteMetadata.siteRepo}/blob/main/data/${path}`
 const discussUrl = (path) =>
-    `https://mobile.twitter.com/search?q=${encodeURIComponent(`${siteMetadata.siteUrl}/${path}`)}`
+    `https://mobile.twitter.com/search?q=${encodeURIComponent(
+        `${siteMetadata.siteUrl}/${path}`
+    )}`
 
 const postDateTemplate: Intl.DateTimeFormatOptions = {
     weekday: 'long',
@@ -29,7 +31,13 @@ interface LayoutProps {
     children: ReactNode
 }
 
-export default function PostLayout({ content, authorDetails, next, prev, children }: LayoutProps) {
+export default function PostLayout({
+    content,
+    authorDetails,
+    next,
+    prev,
+    children,
+}: LayoutProps) {
     const { filePath, path, slug, date, title, tags } = content
     const basePath = path.split('/')[0]
 
@@ -144,7 +152,9 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
                                                     Previous Article
                                                 </h2>
                                                 <div className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400">
-                                                    <Link href={`/${prev.path}`}>{prev.title}</Link>
+                                                    <Link href={`/${prev.path}`}>
+                                                        {prev.title}
+                                                    </Link>
                                                 </div>
                                             </div>
                                         )}
@@ -154,7 +164,9 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
                                                     Next Article
                                                 </h2>
                                                 <div className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400">
-                                                    <Link href={`/${next.path}`}>{next.title}</Link>
+                                                    <Link href={`/${next.path}`}>
+                                                        {next.title}
+                                                    </Link>
                                                 </div>
                                             </div>
                                         )}

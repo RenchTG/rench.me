@@ -30,7 +30,10 @@ function Pagination({ totalPages, currentPage }: PaginationProps) {
         <div className="space-y-2 pb-8 pt-6 md:space-y-5">
             <nav className="flex justify-between">
                 {!prevPage && (
-                    <button className="cursor-auto disabled:opacity-50" disabled={!prevPage}>
+                    <button
+                        className="cursor-auto disabled:opacity-50"
+                        disabled={!prevPage}
+                    >
                         Previous
                     </button>
                 )}
@@ -50,7 +53,10 @@ function Pagination({ totalPages, currentPage }: PaginationProps) {
                     {currentPage} of {totalPages}
                 </span>
                 {!nextPage && (
-                    <button className="cursor-auto disabled:opacity-50" disabled={!nextPage}>
+                    <button
+                        className="cursor-auto disabled:opacity-50"
+                        disabled={!nextPage}
+                    >
                         Next
                     </button>
                 )}
@@ -78,7 +84,9 @@ export default function ListLayout({
 
     // If initialDisplayPosts exist, display it if no searchValue is specified
     const displayPosts =
-        initialDisplayPosts.length > 0 && !searchValue ? initialDisplayPosts : filteredBlogPosts
+        initialDisplayPosts.length > 0 && !searchValue
+            ? initialDisplayPosts
+            : filteredBlogPosts
 
     return (
         <>
@@ -125,7 +133,10 @@ export default function ListLayout({
                                         <dt className="sr-only">Published on</dt>
                                         <dd className="text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
                                             <time dateTime={date}>
-                                                {formatDate(date, siteMetadata.locale)}
+                                                {formatDate(
+                                                    date,
+                                                    siteMetadata.locale
+                                                )}
                                             </time>
                                         </dd>
                                     </dl>
@@ -140,7 +151,9 @@ export default function ListLayout({
                                                 </Link>
                                             </h3>
                                             <div className="flex flex-wrap">
-                                                {tags?.map((tag) => <Tag key={tag} text={tag} />)}
+                                                {tags?.map((tag) => (
+                                                    <Tag key={tag} text={tag} />
+                                                ))}
                                             </div>
                                         </div>
                                         <div className="prose max-w-none text-gray-500 dark:text-gray-400">

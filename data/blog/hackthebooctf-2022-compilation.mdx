@@ -1,0 +1,117 @@
+---
+title: 'HackTheBoo CTF 2022: Writeup Compilation'
+date: '2022-10-30'
+tags: ['compilation']
+draft: false
+summary: 'A compilation of interesting challenges and solutions from HackTheBoo CTF 2022.'
+---
+
+<TOCInline toc={props.toc} asDisclosure toHeading={2} />
+
+# Cult Meeting
+
+-   **Challenge Description**: After months of research, you're ready to attempt to infiltrate the meeting of a shadowy cult. Unfortunately, it looks like they've changed their password!
+
+### In-Depth Solution
+
+In this challenge, we are given a 64-bit binary which, if ran, asks us to provide a password. Opening this binary in Ghidra shows us the following code in main:
+
+![image](https://user-images.githubusercontent.com/91157382/199040147-dbfd1b06-d347-4b92-81a2-17ee899dae1d.png)
+
+We see that all the program is doing is simply prompting us for the password and comparing it with a string. If correct we get a shell! What's easy about this challenge is that the password they compare against is in plain-sight so we are able to take the password: `sup3r_s3cr3t_p455w0rd_f0r_u!`
+
+Then we just spin up an instance and input the password. Once we have shell we can simply run `cat flag.txt` and get our flag.
+
+Flag: `HTB{1nf1ltr4t1ng_4_cul7_0f_str1ng5}`
+
+---
+
+# Evaluation Deck
+
+**Challenge Description**: A powerful demon has sent one of his ghost generals into our world to ruin the fun of Halloween. The ghost can only be defeated by luck. Are you lucky enough to draw the right cards to defeat him and save this Halloween?
+
+### In-Depth Solution
+
+Simply playing around with the website did not render anything useful. Killing the ghost multiple times changed nothing, so it seemed to me that the description of the challenge wouldn't be very helpful.
+
+Looking into the code, however, was something interesting. In `routes.py`, we could see that a flask blueprint was being created, one web and the other api.
+
+![image](https://user-images.githubusercontent.com/91157382/199043471-cdecb36c-fe26-4ff7-a636-6541d914b844.png)
+
+Here, we can also see something very dangerous. The script compiles and then executes something using the three values of `current_health`, `operator`, and `attack_power`. So this looks like a code injection challenge. However, both `current_health` and `attack_power` get changed to integers, so it will be difficult to work with them. So, let's use the operator!
+
+In my solution I sent all my requests with `curl`, but a lot of other tools would've worked. Firstly, the code in `routes.py` tells us we must be sending a POST request, but also it must be formatted in a proper JSON format. In `curl` this looked like:
+
+```
+curl -X POST http://url/api/get_health -H 'Content-Type: application/json' -d "{"current_health":"5", "attack_power":"5", "operator":"+"}"
+```
+
+_Note: `url` would be replaced with whatever url my spawned instance gives me_
+
+Making this request does in fact return $5 + 5$ and sets the `ghost`'s health to $10$. Now, time to craft our injection! In the end, I saw that this was all compiling in python so decided to use the os library, and then with it running a command to print the flag, which we know is at /flag.txt due to the Dockerfile provided.
+
+Eventually, I figured out I could simply put a comment at the end of my operator value, which would essentially ignore anything after my injection. With enough finnicking around I was able to create this:
+
+```
+curl -s -X POST http://url/api/get_health -H 'Content-Type: application/json' -d "{\"current_health\":\"5\", \"attack_power\":\"5\", \"operator\":\"; import os; result=os.popen('cat /flag.txt').read(); # \"}"
+```
+
+Additionally, because the whole point of the request is to create and set a variable called `result`, we can simply overwrite it with whatever the output of our os command is, in this case the flag. Also this command looks really ugly with escaping all the double quotes, this is why next time I would use a better tool for sending requests like Postman, rather than with `curl`.
+
+Sending that request gives us the flag!
+
+Flag: `HTB{c0d3_1nj3ct10ns_4r3_Gr3at!!}`
+
+# Spookifier
+
+-   **Challenge Description**: There's a new trend of an application that generates a spooky name for you. Users of that application later discovered that their real names were also magically changed, causing havoc in their life. Could you help bring down this application?
+
+### In-Depth Solution
+
+The website given to us is pretty simple. A textbox and whenever text is entered, it gets changed into four different fonts. Looking at the source code provided we can see in util.py that all of the four fonts are created. What is interesting is that only the fourth font supports any meaningful characters that would allow us to perform some type of injection, so most likely we will be focusing on the fourth box.
+
+Next, I wanted to know how our input was being processed, to help figure out how we can exploit it. Eventually I found in `routes.py` this:
+
+![image](https://user-images.githubusercontent.com/91157382/199048755-21029b82-22a0-4822-bbcb-70e3d0488b0a.png)
+
+`return render_template('index.html',output=converted)` this line is what caught my eye. Not knowing much I Googled `render_template` vulnerabilities. I quickly found many sources that pointed to SSTI (server-side template injection).
+
+![image](https://user-images.githubusercontent.com/91157382/199049879-31c9bf41-c2ac-4288-94c1-807439045afa.png)
+
+For example, the image above shows different injections you can test to figure out what is running on the server. The simplest one `${7*7}` did in fact work and the fourth textbox showed 49. So, we've identified the vulnerability.
+
+Additionally, the source code already tells us which version of flask we are using, so we don't have to do all that testing! More Googling eventually led me to [this link](https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Server%20Side%20Template%20Injection/README.md) which has an incredible list of different SSTI injections. Going down to the `mako` section, we have a bunch of different ways to access the `os` module with our injection.
+
+![image](https://user-images.githubusercontent.com/91157382/199051101-16160db1-b9db-4204-b22b-cb5d636eb339.png)
+
+The very first injection provided seemed to be working and eventually I was able to get this input to work:
+
+`${self.module.cache.util.os.popen("cat /flag.txt").read()}`
+
+Then all I had to do was look at the fourth box and there was the flag!
+
+Flag: `HTB{t3mpl4t3_1nj3ct10n_1s_$p00ky!!}`
+
+---
+
+# Wrong Spooky Season
+
+-   **Challenge Description**: "I told them it was too soon and in the wrong season to deploy such a website, but they assured me that theming it properly would be enough to stop the ghosts from haunting us. I was wrong." Now there is an internal breach in the Spooky Network and you need to find out what happened. Analyze the the network traffic and find how the scary ghosts got in and what they did.
+
+### In-Depth Solution
+
+This file gave us a simple `.pcap` file with many TCP and HTTP requests. I first extracted HTTP objects and saw many different images, scripts, HTML documents, etc. Everything that would make a good and simple website. However, I also saw three data files that looked like commands run on a shell. The commands were `whoami`, `id`, and an installation of `socat`.
+
+It seemed to me by looking at the HTTP objects and packets that someone connected to the website, exploited some vulnerability to gain a shell, and then opened port 1337 on the server, thus creating a direct connection to the server.
+
+_Quick note: The vulnerability exploited on the site seems to be Spring4Shell, which I thought was pretty interesting. The flag also references it!_
+
+One thing that is also important to note here. At the beginning, most of the TCP packets are handshakes and such between the user and the website. They also don't contain much important data. All the important data is sent through http packets. However, once the user gets a shell and creates a connection with socat, no more HTTP packets are sent and instead the TCP packets have all the important information and commands being run.
+
+Looking through all of the HTTP packets showed nothing interesting, other than the context for what happened and what was exploited. However the TCP packets at the end of the file contain many of the commands that are run on the server. In one of them we see:
+
+![image](https://user-images.githubusercontent.com/91157382/199054256-c4f64024-4947-4060-9405-9f3ca67e4108.png)
+
+That looks like base64 to me. Sure enough if we reverse the string and decode it from base64, we get the flag.
+
+Flag: `HTB{j4v4_5pr1ng_just_b3c4m3_j4v4_sp00ky!!}`

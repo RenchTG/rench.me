@@ -32,7 +32,10 @@ function Pagination({ totalPages, currentPage }: PaginationProps) {
         <div className="space-y-2 pb-8 pt-6 md:space-y-5">
             <nav className="flex justify-between">
                 {!prevPage && (
-                    <button className="cursor-auto disabled:opacity-50" disabled={!prevPage}>
+                    <button
+                        className="cursor-auto disabled:opacity-50"
+                        disabled={!prevPage}
+                    >
                         Previous
                     </button>
                 )}
@@ -52,7 +55,10 @@ function Pagination({ totalPages, currentPage }: PaginationProps) {
                     {currentPage} of {totalPages}
                 </span>
                 {!nextPage && (
-                    <button className="cursor-auto disabled:opacity-50" disabled={!nextPage}>
+                    <button
+                        className="cursor-auto disabled:opacity-50"
+                        disabled={!nextPage}
+                    >
                         Next
                     </button>
                 )}
@@ -88,10 +94,12 @@ export default function ListLayoutWithTags({
                     </h1>
                 </div>
                 <div className="flex sm:space-x-24">
-                    <div className="hidden h-full max-h-screen min-w-[280px] max-w-[280px] flex-wrap rounded bg-gray-50 pt-5 shadow-md dark:bg-gray-900/70 dark:shadow-gray-800/40 sm:flex">
+                    <div className="hidden h-full max-h-screen min-w-[280px] max-w-[280px] flex-wrap overflow-auto rounded bg-gray-50 pt-5 shadow-md dark:bg-gray-900/70 dark:shadow-gray-800/40 sm:flex">
                         <div className="px-6 py-4">
                             {pathname.startsWith('/blog') ? (
-                                <h3 className="font-bold uppercase text-primary-500">All Posts</h3>
+                                <h3 className="font-bold uppercase text-primary-500">
+                                    All Posts
+                                </h3>
                             ) : (
                                 <Link
                                     href={`/blog`}
@@ -104,7 +112,8 @@ export default function ListLayoutWithTags({
                                 {sortedTags.map((t) => {
                                     return (
                                         <li key={t} className="my-3">
-                                            {pathname.split('/tags/')[1] === slug(t) ? (
+                                            {pathname.split('/tags/')[1] ===
+                                            slug(t) ? (
                                                 <h3 className="inline px-3 py-2 text-sm font-bold uppercase text-primary-500">
                                                     {`${t} (${tagCounts[t]})`}
                                                 </h3>
@@ -131,10 +140,15 @@ export default function ListLayoutWithTags({
                                     <li key={path} className="py-5">
                                         <article className="flex flex-col space-y-2 xl:space-y-0">
                                             <dl>
-                                                <dt className="sr-only">Published on</dt>
+                                                <dt className="sr-only">
+                                                    Published on
+                                                </dt>
                                                 <dd className="text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
                                                     <time dateTime={date}>
-                                                        {formatDate(date, siteMetadata.locale)}
+                                                        {formatDate(
+                                                            date,
+                                                            siteMetadata.locale
+                                                        )}
                                                     </time>
                                                 </dd>
                                             </dl>
@@ -150,7 +164,10 @@ export default function ListLayoutWithTags({
                                                     </h2>
                                                     <div className="flex flex-wrap">
                                                         {tags?.map((tag) => (
-                                                            <Tag key={tag} text={tag} />
+                                                            <Tag
+                                                                key={tag}
+                                                                text={tag}
+                                                            />
                                                         ))}
                                                     </div>
                                                 </div>

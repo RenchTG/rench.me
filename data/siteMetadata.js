@@ -3,7 +3,8 @@ const siteMetadata = {
     title: 'rench.me',
     author: 'Philip Dobranowski',
     headerTitle: 'rench.me',
-    description: 'Your wonderful website description goes here (please come up with one Rench)',
+    description:
+        'Your wonderful website description goes here (please come up with one Rench)',
     language: 'en-us',
     theme: 'dark', // system, dark or light
     siteUrl: 'https://philipdobranowski.com',
@@ -84,7 +85,7 @@ const siteMetadata = {
         //   indexName: 'docsearch',
         // },
     },
-    themeColor: '#f97316'
+    themeColor: '#f97316',
 }
 
 module.exports = siteMetadata

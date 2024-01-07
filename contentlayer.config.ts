@@ -1,4 +1,8 @@
-import { defineDocumentType, ComputedFields, makeSource } from 'contentlayer/source-files'
+import {
+    defineDocumentType,
+    ComputedFields,
+    makeSource,
+} from 'contentlayer/source-files'
 import { writeFileSync } from 'fs'
 import readingTime from 'reading-time'
 import GithubSlugger from 'github-slugger'
@@ -23,6 +27,7 @@ import siteMetadata from './data/siteMetadata'
 import { allCoreContent, sortPosts } from 'pliny/utils/contentlayer.js'
 
 const root = process.cwd()
+const isProduction = process.env.NODE_ENV === 'production'
 
 const computedFields: ComputedFields = {
     readingTime: { type: 'json', resolve: (doc) => readingTime(doc.body.raw) },
@@ -47,7 +52,7 @@ const computedFields: ComputedFields = {
 function createTagCount(allBlogs) {
     const tagCount: Record<string, number> = {}
     allBlogs.forEach((file) => {
-        if (file.tags && file.draft !== true) {
+        if (file.tags && (!isProduction || file.draft !== true)) {
             file.tags.forEach((tag) => {
                 const formattedTag = GithubSlugger.slug(tag)
                 if (formattedTag in tagCount) {
@@ -85,7 +90,7 @@ export const Blog = defineDocumentType(() => ({
         lastmod: { type: 'date' },
         draft: { type: 'boolean' },
         summary: { type: 'string' },
-        images: { type: 'list', of: { type: 'string' } },
+        images: { type: 'json' },
         authors: { type: 'list', of: { type: 'string' } },
         layout: { type: 'string' },
         bibliography: { type: 'string' },
@@ -104,7 +109,6 @@ export const Blog = defineDocumentType(() => ({
                 description: doc.summary,
                 image: doc.images ? doc.images[0] : siteMetadata.socialBanner,
                 url: `${siteMetadata.siteUrl}/${doc._raw.flattenedPath}`,
-                author: doc.authors,
             }),
         },
     },

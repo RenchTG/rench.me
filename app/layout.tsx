@@ -1,4 +1,4 @@
-import 'css/tailwind.css'
+import '../css/tailwind.css'
 import 'pliny/search/algolia.css'
 
 import { Rubik } from 'next/font/google'
@@ -55,7 +55,6 @@ export const metadata: Metadata = {
         card: 'summary_large_image',
         images: [siteMetadata.socialBanner],
     },
-    themeColor: siteMetadata.themeColor,
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -83,17 +82,33 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 href="/static/favicons/favicon-16x16.png"
             />
             <link rel="manifest" href="/static/favicons/site.webmanifest" />
-            <link rel="mask-icon" href="/static/favicons/safari-pinned-tab.svg" color="#5bbad5" />
+            <link
+                rel="mask-icon"
+                href="/static/favicons/safari-pinned-tab.svg"
+                color="#5bbad5"
+            />
             <meta name="msapplication-TileColor" content="#000000" />
-            <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f97316" />
-            <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#f97316" />
+            <meta
+                name="theme-color"
+                media="(prefers-color-scheme: light)"
+                content="#fff"
+            />
+            <meta
+                name="theme-color"
+                media="(prefers-color-scheme: dark)"
+                content="#000"
+            />
             <link rel="alternate" type="application/rss+xml" href="/feed.xml" />
             <body className="bg-white text-black antialiased dark:bg-gray-900 dark:text-white">
                 <ThemeProviders>
-                    <Analytics analyticsConfig={siteMetadata.analytics as AnalyticsConfig} />
+                    <Analytics
+                        analyticsConfig={siteMetadata.analytics as AnalyticsConfig}
+                    />
                     <SectionContainer>
                         <div className="flex h-screen flex-col justify-between font-sans">
-                            <SearchProvider searchConfig={siteMetadata.search as SearchConfig}>
+                            <SearchProvider
+                                searchConfig={siteMetadata.search as SearchConfig}
+                            >
                                 <Header />
                                 <main className="mb-auto">{children}</main>
                             </SearchProvider>
