@@ -1,5 +1,3 @@
-const { Blog } = require("contentlayer.config")
-
 /** @type {import("pliny/config").PlinyConfig } */
 const siteMetadata = {
     title: 'Philip Dobranowski',
