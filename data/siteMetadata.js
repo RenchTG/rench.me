@@ -1,21 +1,23 @@
+const { Blog } = require("contentlayer.config")
+
 /** @type {import("pliny/config").PlinyConfig } */
 const siteMetadata = {
-    title: 'rench.me',
+    title: 'Philip Dobranowski',
     author: 'Philip Dobranowski',
     headerTitle: 'rench.me',
     description:
-        'Your wonderful website description goes here (please come up with one Rench)',
+        "Philip Dobranowski's personal website and blog. Home to security and software tomfoolery.",
     language: 'en-us',
     theme: 'dark', // system, dark or light
-    siteUrl: 'https://philipdobranowski.com',
+    siteUrl: 'https://rench.me',
     siteRepo: 'https://github.com/RenchTG/rench.me',
     siteLogo: '/static/favicons/icon.png',
     socialBanner: '/static/images/twitter-card.png',
-    email: 'dobranowskip1@gmail.com',
+    email: 'philip@rench.me',
     github: 'https://github.com/RenchTG',
     twitter: 'https://twitter.com/RenchTG',
     ctftime: 'https://ctftime.org/user/118897',
-    linkedin: 'https://www.linkedin.com/in/philip-dobranowski-17804a204/',
+    linkedin: 'https://www.linkedin.com/in/philip-dobranowski',
     locale: 'en-US',
     analytics: {
         // If you want to use an analytics provider you have to add it to the
