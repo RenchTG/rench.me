@@ -5,7 +5,7 @@ import SocialIcon from '@/components/social-icons'
 export default function Home({ posts }) {
     return (
         <>
-            <div className="-mt-28 flex h-screen items-center justify-center">
+            <div className="-mt-32 flex h-screen items-center justify-center">
                 <div className="flex flex-col items-center gap-6 md:flex-row md:gap-12">
                     <Avatar className="h-48 w-48 md:h-64 md:w-64">
                         <AvatarImage
