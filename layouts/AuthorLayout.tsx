@@ -23,7 +23,7 @@ export default function AuthorLayout({ children, content }: Props) {
 
     return (
         <>
-            <div className="h-[calc(100vh-139px)] divide-y divide-gray-200 dark:divide-gray-700">
+            <div className="md:h-[calc(100vh-139px)] divide-y divide-gray-200 dark:divide-gray-700">
                 <div className="my-8 items-start space-y-2 xl:grid xl:grid-cols-3 xl:gap-x-8 xl:space-y-0">
                     {/* my shadcn styles aren't working */}
                     <div className="flex h-full flex-col items-center space-x-2 rounded-xl bg-[#e6e6e6] p-8 dark:bg-[#191715]">
