@@ -18,8 +18,8 @@ export default function Home({ posts }) {
                         <div className="text-center text-4xl font-bold md:text-left md:text-6xl">
                             Hey! 👋, I&apos;m Philip.
                         </div>
-                        <div className="text-center text-gray-500 dark:text-gray-400 md:text-left">
-                            I&apos;m a cybersecurity enthusiast, CTF player, and software developer. Feel free to check out my <a href="/about">about</a> page or contact me at the links below!
+                        <div className="text-center text-gray-500 dark:text-gray-400 md:text-left text-base">
+                            I&apos;m a cybersecurity enthusiast, CTF player, and software developer. Feel free to check out my <a href="/about" className="text-blue-500">about</a> page or contact me at the links below!
                         </div>
                         <div className="mt-4 flex justify-center gap-4 md:justify-start md:gap-8">
                             <SocialIcon

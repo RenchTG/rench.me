@@ -3,6 +3,7 @@ const siteMetadata = {
     title: 'Philip Dobranowski',
     author: 'Philip Dobranowski',
     headerTitle: 'rench.me',
+    footerTitle: 'rench.me',
     description:
         "Philip Dobranowski's personal website and blog. Home to security and software tomfoolery.",
     language: 'en-us',
