@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/Avatar'
 import siteMetadata from '@/data/siteMetadata'
 import SocialIcon from '@/components/social-icons'
+import { genPageMetadata } from 'app/seo'
 
 export const metadata = genPageMetadata({ title: 'Home' })
 
