@@ -2,6 +2,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/Avatar'
 import siteMetadata from '@/data/siteMetadata'
 import SocialIcon from '@/components/social-icons'
 
+export const metadata = genPageMetadata({ title: 'Home' })
+
 export default function Home({ posts }) {
     return (
         <>
