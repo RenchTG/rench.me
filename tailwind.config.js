@@ -48,6 +48,12 @@ module.exports = {
                         code: {
                             color: theme('colors.indigo.500'),
                         },
+                        'code::before': {
+                            content: '""'
+                        },
+                        'code::after': {
+                            content: '""'
+                        },
                     },
                 },
                 invert: {

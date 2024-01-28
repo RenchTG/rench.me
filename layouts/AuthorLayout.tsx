@@ -12,8 +12,7 @@ export default function AuthorLayout({ children, content }: Props) {
     const {
         name,
         avatar,
-        occupation,
-        company,
+        description,
         email,
         twitter,
         linkedin,
@@ -41,10 +40,7 @@ export default function AuthorLayout({ children, content }: Props) {
                             {name}
                         </h3>
                         <div className="text-center text-gray-500 dark:text-gray-400">
-                            {occupation}
-                        </div>
-                        <div className="text-center text-gray-500 dark:text-gray-400">
-                            {company}
+                            {description}
                         </div>
                         <div className="flex space-x-3 pt-6">
                             <SocialIcon kind="mail" href={`mailto:${email}`} />
