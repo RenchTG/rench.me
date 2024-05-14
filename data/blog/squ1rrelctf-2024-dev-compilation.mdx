@@ -14,6 +14,7 @@ Last weekend I was invited to author a challenge for the first edition of squ1rr
 
 The event had a couple issues and things to improve on for next year, but overall for their first ever event and given the resources at their disposal, I think the Vandy club did a really great job and this was reflected in the ctftime rating votes and survey responses. Also, the CTF was intended to be open to beginner and intermediate university students and I believe they fit this role perfectly. However, for this blog, I will be focusing more on my own contributions rather than the event as a whole. To be honest, I would not even be able to do the event justice as I did not see everything operating behind-the-scenes. Anyways, hope you enjoy!
 
+
 # My Challenge (Squirrel Messaging Service)
 
 The challenge I contributed to the ctf was Squirrel Messaging Service or "sms" for short. As stated earlier, this was asked to be an easy-medium level pwn and generally align with the easier difficulty level of the event. For this, I wanted to focus on a basic pwn concept, but make it not instantly solvable by an experienced pwner. After getting a rundown of the other pwn challenges currently written, I saw a lack of format string or heap challenges (though this ended up not being the case as format string bugs were present in 2 other challenges). I eventually decided to write a format string challenge as the event was less than two days away and I don't have much experience writing heap chals. Looking back, I probably could've written a basic House of X heap challenge to create a more diverse set of challenges, but it turned out alright.
@@ -21,8 +22,7 @@ The challenge I contributed to the ctf was Squirrel Messaging Service or "sms" f
 So I knew I wanted to write a nontrivial, but still relatively easy format string challenge. To achieve this my first goal was to ensure the pwntools function `fmtstr_payload` could not be used to solve the challenge. All too often, I see players use the same formulaic method of solving format string challenges with that function without really understanding what's happening under the hood.
 
 Eventually, I figured the best way to go about this was to create a cap on how many characters would be printf'ed. The `fmtstr_payload` function often creates very long payloads, so limiting the length allowed would work. Creating a balance between length of payload and how many payloads can be sent can create some very interesting format string golf challenges such as JoshL's stiller-printf that my teammate Eth007 has a great writeup on [here](https://eth007.me/blog/posts/stiller-printf/), but I thought this would create too complex of a challenge, so I opted to remove one of the variables, number of payloads, and simply allow an infinite amount of printfs using a while true loop. Here is the source code I came up with for the challenge:
-
-## Source
+### Source
 
 ```c
 #include <stdio.h>
@@ -106,11 +106,12 @@ int main()
 
 Because of the very loosely restricted printf and easy leaks there was no reason to turn off any protections, so I simply compiled with `gcc sms.c -o sms`. I did my best to keep the program as simple as possible. I asked my teammate unvariant if I could use the iflush and readline functions from his challenge heaps of fun in AmateursCTF 2024 which you can find the source for [here](https://unvariant.pages.dev/writeups/amateursctf-2024/pwn-heaps-of-fun/chal/chal.c/). They remove the headache often associated with reading in input and dealing with buffering in C.
 
-Then, main just calls squirrel_set in a while true and gives the user the option to have main return (this will be touched on later). Squirrel_set reads in your message and name and squirrel_send outputs the messages with the format string vulnerability obviously present with name. The only issue is that the name buffer only has a size of 12. There are two key observations for this challenge: the first, that was already touched on earlier, is the fact that you are given an unlimited number of printf's. This means that any payload can be broken down into smaller pieces such as one byte at a time. The second is that you also can input anything into the additional message buffer. This is important as the message buffer is passed in as an argument to the squirrel_send function, meaning it gets copied onto the stack. This then lets you reference pointers there in your printf payloads.
+Then, main just calls squirrel_set in a while true and gives the user the option to have main return (this will be touched on later). Squirrel_set reads in your message and name and squirrel_send outputs the messages with the format string vulnerability obviously present with name. The only issue is that the name buffer only has a size of 12. There are two key observations for this challenge:
+1. You are given an unlimited number of printf's. This means that any payload can be broken down into smaller pieces such as one byte at a time. 
+2. You can input anything into the additional message buffer. This is important as the message buffer is passed in as an argument to the squirrel_send function, meaning it gets copied onto the stack. This then lets you reference pointers there in your printf payloads.
 
-Using these two key observations a write what where primitive can be constructed. I could've added more complexity to the challenge at this point by requiring harder methods to get a shell like libc got entries, exit funcs, etc. but this felt unnecessary. The key part of the challenge was creating the primitive, so I let users have a simple way to break out of the while true loop allowing main to return. This lets you write a rop chain on the stack byte by byte for an easy shell. Let's break down my solution script now.
-
-## Solution
+Using these two key observations a write-what-where primitive can be constructed. I could've added more complexity to the challenge at this point by requiring harder methods to get a shell like libc got entries, exit funcs, etc. but this felt unnecessary. The key part of the challenge was creating the primitive, so I let users have a simple way to break out of the while true loop allowing main to return. This lets you write a rop chain on the stack byte by byte for an easy shell. Let's break down my solution script now.
+### Solution
 
 ```py
 from pwn import *
@@ -176,15 +177,14 @@ A lot of this script is my pwninit template, but the most important content is i
 
 Then, run is relatively self explanatory. I first leak libc base in order to call system later in the rop chain and I leak a stack address to find main's return address which is where we'll be writing the rop chain. I then set everything up and write one byte at a time to the stack using my write function. After everything is written, return from main by sending an 'n' to the question and main will return and execute your rop chain. The script does take some time because we are writing byte by byte, but after some waiting that gets us a shell!
 
-![](/public/static/images/blog-1.png)
+![image](/static/images/blog-1.png)
 
 Overall, I had a lot of fun writing this challenge. It was simple, but did its job well. It ended at 19 solves, being in the middle of the pwn category in terms of number of solves and slightly harder than the average of all challenges. Hope you enjoyed it!
 
 # Fun time with playtime
 
 Playtime was a challenge written by ZeroDayTea. I didn't work on the initial challenge, though I talked over the idea with him earlier. It was a shellcode jail inspired by ptr_yudai's challenge from BlackHat MEA CTF Finals 2023 called `babysbx`. ZeroDayTea and I were at the event and solved it using an unintended solve path. We wanted to create a second challenge that would be a simplified version of yudai's challenge and forced players to use the unintended path we used. After talking over the idea, ZeroDayTea wrote the challenge, however a few hours into the ctf it was obvious something was wrong. Playtime had more solves than sms for a very long time even though it was a pretty difficult shellcode jail compared to an easy-medium printf challenge. We had let some unintendeds through... Here is the source code for the original playtime.
-
-## Original Source
+### Original Source
 
 ```c
 #include <stdio.h>
@@ -281,8 +281,7 @@ After talking to some of the players that solved we had identified the two main 
 2. The "/bin/whoami" string was stored on the heap, so a single call of the `brk` syscall would give you the address of the end of the heap, this was then a static offset away from the string and was easy to modify.
 
 There was enough time left in the ctf, so I thought about releasing a revenge challenge to fix these unintendeds. They were quite easy to fix all I had to do was block more syscalls and move the "/bin/whoami" string into the data segment of the elf forcing players to leak elf base in some form or another. This led to update the source code in the following way.
-
-## New Source Changes
+### New Source Changes
 
 ```
 35a38
@@ -298,8 +297,7 @@ There was enough time left in the ctf, so I thought about releasing a revenge ch
 ```
 
 The "/bin/whoami" string was now stored in the data segment of the elf and openat2 and sendfile were blocked. This challenge was deployed as `revengeplay` and seemed to work well initially. It ended with less solves than the original `playtime`, however this was to be expected as it was released much later into the event. However, after talking to players we left in one more unintended. Because seccomp rules are stored on the heap, the heap leak from `brk` can again give us an easily accessible pointer to "/bin/whoami" at a static offset. Looking back, this is actually a tactic nobodyisnobody used to solve the original challenge in BlackHat which can be seen [here](https://github.com/nobodyisnobody/write-ups/tree/main/Blackhat.MEA.CTF.Finals.2023/pwn/babysbx#3---lets-find-binid-string-address-in-rodata). However, this was not as much of an issue in ptr yudai's challenge as an additional step to solving was finding how to modify the string even when it was stored in ro_data which makes easily leaking it not as much of an issue. Anyways, onto the intended solution.
-
-## Solution
+### Solution
 
 ```py
 from pwn import *
@@ -371,7 +369,7 @@ The shellcode is broken into three main parts:
 - The second part leaks elf base using the brk and nanosleep trick. First, the call to `brk` gives us the address of the end of the heap. The distance from the end of the data segment to the start of the heap does change due to ASLR, but it is generally relatively small and makes our bruteforce search method go much faster. Then, we start a loop from the start of the heap subtracting 0x1000 bytes at a time. We call `nanosleep` passing the address we want to test in rdi. Nanosleep has an interesting behavior where if an unmapped address is passed as an argument, it will return 0xfffffffffffffff2, while a mapped address will return 0xffffffffffffffea. Because everything from the data segment to the heap is unmapped, we know the first mapped address we hit will be in the data segment of the elf and will be a constant, relative offset from elf base.
 - The third part finds the "/bin/whoami" string as it was always 0x100 bytes ahead of the first mapped address we'd find with nanosleep. From there, we simply modify the bytes to be "/getflag" and then call execve and pass it in as a paramter. This prints our flag!
 
-![](/public/static/images/blog-2.png)
+![image](/static/images/blog-2.png)
 
 In the end, I had a lot of fun seeing players' unintendeds for this challenge and trying to patch them. Unfortunately, shellcode jails often open a lot of possibilities for players to find creative ways to break your challenge, but I think that's ok. It can be a good experience for both the player and author teaching each other new tricks that they may not have known before.
 
