@@ -1,0 +1,352 @@
+---
+title: 'PBJar CTF 2023: Writeup Compilation'
+description: 'A compilation of interesting writeups from PBJar CTF 2023.'
+date: 2023-10-31
+tags: ['writeups', 'compilation']
+authors: ['philip']
+draft: false
+---
+
+## MEV
+
+- **Challenge Author**: bruh.#0766
+
+- **Challenge Description**: The miner of Block #12983883 on the Ethereum Blockchain partakes in the common practice of MEV. What is the exact amount of Ether that was transfered to the miner as a bribe from the transaction that was included first in this block? Info about MEV: https://ethereum.org/en/developers/docs/mev/ Flag format: flag{0.006942069420}
+
+<details closed>
+<summary><b>TLDR</b></summary>
+
+- Go on etherscan.io and find the block provided in the challenge description.
+- Find the first transaction on that block.
+- Copy the exact amount transferred to the MEV bot and that's the flag.
+
+</details>
+
+### In-Depth Solution
+
+This challenge is surprsingly the second to least solved challenge in the misc category _excluding survey_ which I thought was kind of weird as I had less trouble with it than some of the other misc challenges. Anyways I digress, here's my solution.
+
+In the description we are given a block that is in fact on the etherium blockchain so no ropsten this time. Then we are told a little about the practice of MEV and given a link to learn about it. However, reading is lame so let's just go right into it.
+
+We fire up etherscan.io, put in the name of the block, and now we must find as the challenge states:
+
+> the exact amount of Ether that was transfered to the miner as a bribe from the transaction that was included first in this block
+
+Now that last part is the most important in regards to where to look. We now know we can find it in the first transaction included in this block. First I clicked the: `145 transactions` link and was taken to [this page](https://etherscan.io/txs?block=12983883). I went to the very first transaction, but I don't see any sketchy bribing here 👀. Then I go back and click the `26 contract internal transactions` link and was taken to [this page](https://etherscan.io/txsInternal?block=12983883). Scrollarooni down to the bottom and wow there cowboy, `MEV Bot: 0x4d2...2d3` and `Wrapped Ether` should be exactly what we're looking for. We know this is something to do with MEV as the ether was transferred to an MEV bot and the wrapped ether must of course be the bribe payment. We can also see that both have identical ether values of `0.009672680170055 Ether`.
+
+Submit that number and it's the flag. In my opinion this challenge should have had much more solves as it really only entailed looking at a block's first transaction but whatever. Enjoy your flag!
+
+Flag: `flag{0.009672680170055}`
+
+---
+
+## Not_Baby_Fixed
+
+- **Challenge Author**: QuickMaffs
+
+- **Challenge Description**: Hmm.... What is this? (Note: Not_Baby has a different solution than intended)
+
+<details closed>
+<summary><b>TLDR</b></summary>
+
+- Factor $a$, $b$, $c$ and use substitution to rewrite the equation for $n$ to only have 2 (known) variables rather than 3.
+- Factor your new polynomial into 2 smaller factors, plug-in your variables and solve for those 2 factors.
+- Use a factoring calculator to get all the prime factors of your two smaller $n$ factors, easier than doing entire big $n$ value.
+- Standard RSA now: Calculate $\phi$, then $d$, then $m$, and finally get the flag.
+
+</details>
+
+### In-Depth Solution
+
+So after looking through the files we have provided we can see that `script.py` reads in `flag.txt` and `nums.txt` and then generates `out.txt`. `Out.txt` prints out an $n$ value, $e$ value, and `ct` value so we know this is RSA. A lot of other solutions that I found for this challenge used factor calculators for a long time or factorDB now that someone uploaded the factors into it. However that's cringe and we like to do the intended solution around here 😎. (Note: I did talk to the challenge author and this method is the intended sol).
+
+So first we have to figure out how to factor $n$ into prime factors so that we can proceed with the RSA decryption process. However, $n$ is supposed to be too large to factor so we must use other methods then simply factor calculators. We do know however from `script.py` that the way $n$ is generated makes this equation:
+
+$$
+n = a^3 + b^3 - 34c^3
+$$
+
+and we know all the values of $a$, $b$, and $c$ from `nums.txt`.
+
+Note: the reason this challenge had to be "fixed" is that the original `Not_Baby` accidentally didn't provide `nums.txt` so it was "supposedly" impossible, but people just ran factor calculators for 2 hours to solve it.
+
+Anyways, knowing $a$, $b$, and $c$, we can try to break up this equation/polynomial or whatever you want to call it to make factoring $n$ more feasible. So we can use any big factorization calculator like alpertron or factorDB to start factoring $a$, $b$, and $c$ (I used factorDB). Eventually, you'll find that $a$ and $c$ have a large, prime common factor and that $b$ and $c$ also have a large, prime common factor. We can then rewrite $a$, $b$, and $c$ using these two large factors we found, lets call them $x$ and $y$.
+
+$$
+x = 321329349024937022728435772726127082487 \\
+y = 302518462040600437690188095770599287567 \\
+a = 15x^2, b = 7y^2, c = 3xy
+$$
+
+Knowing that $n = a^3 + b^3 - 34c^3$, we can know plug-in the values we have calculated and make a new two-variable equation which looks like this:
+
+$$
+3375x^6 + 343y^6 - 918x^3y^3
+$$
+
+Now we have a two-variable equation/polynomial so we can try to factor it out now. You can use something like sage for this but I was lazy and found this [website](https://quickmath.com/webMathematica3/quickmath/algebra/factor/basic.jsp) that factored it for me. The two resulting factors we get are:
+
+$$
+(15x^2 + 3xy + 7y^2)(225x^4 - 45x^3y - 96x^2y^2 - 21xy^3 + 49y^4)
+$$
+
+Now we have successfully split $n$ into two smaller factors, yay. Rather than mutliplying out those polynomials by hand we can write a script to do it for us.
+
+```python
+x = 321329349024937022728435772726127082487
+y = 302518462040600437690188095770599287567
+
+f = 15*x**2 + 3*x*y + 7*y**2
+g = 225*x**4 - 45*x**3*y - 96*x**2*y**2 - 21*x*y**3 + 49*y**4
+
+print(f)
+print(g)
+```
+
+Now that we have two smaller numbers that we know are the products of $n$, we can begin to prime factorize them, which will be much faster and more efficient than an incredibly large $n$ value. Using factorDB I was able to get a long list of only prime factors that all multiply to get $n$. Time to write our script and decrypt this RSA now that the hard part is over. I will post my full script in this folder but I will give a brief explanation of it here. After calculating $f$ and $g$ I create an array of all the prime factors and call it `nums`.
+
+```python
+nums = [9, 5, 71, 103, 50543, 190026430624001, 2703970397964298301, 2612704207743743498414225576245857791, 8581, 9202842813283520053373814153366196725555378670569425651403981961003320229089581578132314718638828971883763395128536959296142080739168256752552585624307]
+```
+
+I then calculate $\phi$ by multiplying all of the factors - 1 by each other (note: I will explain why this won't always work).
+
+```python
+phi = 1
+for num in nums:
+	phi *= (num - 1)
+```
+
+Then I just calculate $d$ value with standard RSA, so $e^{-1} \mod \phi$. I think this can also be achieved with the pycrypto inverse function with inverse ($e$, $\phi$).
+
+```python
+d = pow(e, -1, phi)
+```
+
+Then find the message, again with standard RSA protocol, so $\text{our cyphertext}^d \mod n$.
+
+```python
+m = pow(ct, d, n)
+```
+
+Then I just run the `long_to_bytes()` function to convert the message from numbers to readable text and voila, we have our flag.
+
+```python
+flag = long_to_bytes(m)
+print(flag)
+```
+
+Quickly to explain my previous note the phi function isn't calculated simply by getting the product of every prime factor - 1 it is actually calculated wtih:
+
+$$
+    \phi(p^e) = p^{(e-1)} \cdot (p-1), \quad p \text{ being the prime and } e \text{ being the exponent }
+$$
+
+Sometimes though you won't get any primes with an exponent $> 1$ so the beginning part of the $\phi$ function which is $p^{(e-1)}$ will just end up equalling $1$, so all you have to really solve for is $(p-1)$. In this problem there was a prime factor of $2^4$, but I was too lazy to write an actually good script so when I solved the $\phi$ function by hand with $2^4$ I found that it would end up multiplying $\phi$ by $8$, so in my `nums` array I just lazily added a factor of $9$ so that when $\phi$ was multiplied by $(num - 1)$ the $9$ would multiply $\phi$ by $8$. If you want a much better way of doing this I'd recommend [checking this out](https://hackmd.io/Dy_A6F9fQTikEtHMEKcZ1Q?view)--this persons write-up has a much better and more dynamic way to calculate $\phi$ that will work with multiple factors with exponents $> 1$. Also funny enough this was the only write-up I could find that solved the challenge with the intended solution so kudos to them. However, as a beginner reading that write-up I thought it could use a little more explanation to help beginners trying to learn which I tried to achieve in this write-up.
+
+Anyways I'm done blabbering now here's the flag that is printed when I run my `solve.py` script.
+
+Flag: `flag{plz_n0_guess_sum_of_a_b_c_d1vides_n}`
+
+Full Script:
+
+```python
+from Crypto.Util.number import *
+
+with open('nums.txt','r') as f:
+	s=f.read().strip().split()
+	a=int(s[0])
+	b=int(s[1])
+	c=int(s[2])
+
+e=65537
+ct=1918452064660929090686220330495385310745803950329608928110672560978679963497394969369363585721389729566306519544561789659164639271919010791127784820214512488663422537225906608133719652453804000168907004058397487865279113133220466050285
+n=3134820448585521702394003995997656455907477282436511703324204127865184340978305062848983553236851077753614495104127538077189920381627136628226756258746377111950396074035862527542407869672121642062363412247864869790585619483151943257840
+
+x = 321329349024937022728435772726127082487
+y = 302518462040600437690188095770599287567
+
+f = 15*x**2 + 3*x*y + 7*y**2
+g = 225*x**4 - 45*x**3*y - 96*x**2*y**2 - 21*x*y**3 + 49*y**4
+
+nums = [9, 5, 71, 103, 50543, 190026430624001, 2703970397964298301, 2612704207743743498414225576245857791, 8581, 9202842813283520053373814153366196725555378670569425651403981961003320229089581578132314718638828971883763395128536959296142080739168256752552585624307]
+phi = 1
+for num in nums:
+	phi *= (num - 1)
+
+d = pow(e, -1, phi)
+
+m = pow(ct, d, n)
+
+flag = long_to_bytes(m)
+
+print(flag)
+```
+
+---
+
+## ProgrammersHateProgramming 2
+
+- **Challenge Author**: ZeroDayTea
+
+- **Challenge Description**: oh noes now there are more filters :(( Link: http://147.182.172.217:42007/
+
+<details closed>
+<summary><b>TLDR</b></summary>
+
+- Use same methodology as the original ProgrammersHateProgramming challenge, but bypass more "one-time" filters and use nesting or concatenation on "permanently" filtered out words.
+
+</details>
+
+### In-Depth Solution
+
+This challenge starts off with the website looking identical to the first `ProgrammersHateProgramming` challenge, but the source code provided is a little bit different. Pretty much as the description says, more filters. To start off I always like getting the `str_replace_first` filters out of the way to make writing the rest of my XSS injection easier. For now my injection just looks like this:
+
+```php
+<? <?php ?> flag
+```
+
+Now that we've got all of the one-time filters out of the way we can craft our injection. For the original challenge I used the php `readfile()` function and was able to do it that way, but this time the word read is filtered out so we won't be able to use that function ... just kidding! We can actually get around these stinky filters quite easily and my answer was **nesting**. If you have something like `readfile()` then when 'read' is filtered out that read will turn into a blank space and the '`file()`' part on the right side will collapse in and result in just `file()`. That caving in as I like to call it can be exploited however. If we nest a read inside another read, then when the inside read is replaced the two sides of the outer read will collapse in and result in a normal read. Phew, that was long, here's an example.
+
+`rereadad` ---> `re` ~~read~~ `ad` ---> `read`
+
+After testing it out it works perfectly and it now means we can use this with all the other functions. But first let's just get the flag. Here's how my final XSS injection turned out:
+
+```php
+<? <?php ?> flag <?php rereadadfile("/flag.php"); ?>
+```
+
+And boom, our flag is printed out. I want to put out a quick note though saying that this is not the only way to solve this challenge. Php has a ton of different functions that you can use to do the same thing as I did here. Another common example I found looks something like:
+
+```php
+<? <?php ?> flag <?php system("llss -a /"); system("ccatat /flag.php"); ?>
+```
+
+This was actually the most common method I saw especially in the original challenge because people had to first even figure out that the flag was being stored in the file flag.php. However a lot of methods did use the php `system()` function so I want to recognize [MikeCAT's solution here](https://mikecat.github.io/ctf-writeups/2021/20210917_PBjar_CTF/web/ProgrammersHateProgramming_2/#en) because it used a different function of `passthru()` which I think is a lot less common and will be less likely filtered out in similar challenges like this. MikeCAT's solution also has a different method than nesting which concatenates strings together using the php `.` operator and this just goes to show how many different ways you can craft this injection.
+
+Anyways enough blabbering here's the flag!
+
+Flag: `flag{wow_that_was_a_lot_of_filters_anyways_how_about_that_meaningful_connection_i_mentioned_earlier_:)}`
+
+---
+
+## Stegosaurus stenops
+
+- **Challenge Author**: ZeroDayTea
+
+- **Challenge Description**: This stenops swallowed the flag... and some unusually large rock
+
+<details closed>
+<summary><b>TLDR</b></summary>
+
+- Use some steg cracking tool like steghide or stegcracker to find hidden data in the file.
+- Figure out that the hint 'rock' is leading you to the wordlist rockyou.txt.
+- Write a script that brute forces the passphrase using words from rockyou.txt.
+
+</details>
+
+### In-Depth Solution
+
+So when we first open up the image we just see a simple stegosaurus, but there must be more here 👀. The challenge is definitely something steganography related so I quickly googled common steganography tools. I ended up finding this tool called steghide where you can simply run a command in the terminal and it should extract the hidden data ... right?
+
+```text
+steghide extract -sf stegosaurus.jpg
+```
+
+First I ran this command, however afterwords it asks me for a passphrase. I was a bit stumped at first but when I looked back at the challenge we are given a hint. From the description we can reasonably infer the author is pointing us towards 'rock'. After doing some research on common passphrases and 'rock' I came across this very neat file called `rockyou.txt`. Turns out this file is an extremely large assortment of the most common passwords that have been used over time. It is extremely big though and the passphrase can only be one of them. Let's make python do the heavy lifting. Also I downloaded `rockyou.txt` at [this link](https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt).
+
+```python
+with open("rockyou.txt", "r") as my_file:
+	for line in my_file:
+```
+
+I started off with these lines of code and now I was able to read in the `rockyou.txt` file I downloaded and loop through each line of it. Now I just had to actually run the steghide command using the lines we take from the txt file.
+
+```python
+os.system("steghide extract -sf stegosaurus.jpg -xf info.txt -p " + "\"" + line + "\"")
+```
+
+After searching I found this neat module by the name of os, that I'm pretty sure is built into python so no installing is necessary, which allows you to run terminal commands from python. Eventually I was able to craft together that line shown above which will try to extract info from the image, put anything extracted into `info.txt`, and use the passphrase taken as we loop through `rockyou.txt`. The weird "`\\"`" on both sides of the variable `line` are just to make sure that if there are any spaces in one of the lines, such as `'I love you'`, the command will read it in as one string rather than spitting out something like:
+
+```text
+Unknown argument "you"
+```
+
+After that just let the terminal get spammed a bunch of times with something along the lines of:
+
+```text
+Unable to extract data with that passphrase
+```
+
+Finally, the nice thing of adding `-xf info.txt` into the command alows you to walk away from your computer in case the data extracted was just raw data as you could come back and it would be neatly saved in `info.txt`. ZeroDayTea set it up however to create a `flag.txt` file for you anyways, so it didn't matter that much, but I think it still makes life much more convenient.
+
+Anyways enough blabbering here's the flag that was extracted!
+
+Flag: `flag{ungulatus_better_than_stenops}`
+
+Full Script:
+
+```python
+import os
+
+with open("rockyou.txt", "r") as my_file:
+	for line in my_file:
+		os.system("steghide extract -sf stegosaurus.jpg -xf info.txt -p " + "\"" + line + "\"")
+```
+
+---
+
+## web
+
+- **Challenge Author**: eyangch
+
+- **Challenge Description**: I downloaded this program back when the version number was still v1. It's been a long time... I heard the most recent update has the flag in it. Download: http://147.182.172.217:42100/v1
+
+<details closed>
+<summary><b>TLDR</b></summary>
+
+- Find the outer limits of the possible versions by just adding 0's.
+- Use a binary search method to keep finding numbers between your limits until you get the newest version.
+- Find the flag in the downloaded flag file.
+
+</details>
+
+### In-Depth Solution
+
+So to start off we go to the website on the link provided and a weird file is downloaded. It has a bunch of non-readable text on it, but some is readable. On it though we can find a link that takes us to download version 2. Once we click the link to version 2 we download another file and in there we get a link to version 3. This will repeat over and over again. Our goal as the description states is to find the newest one. I start off by playing around with the url and I realize that I can change the url to get whatever version number I put in. I then proceed to find the limits of the version by just adding zeroes.
+
+Eventually I get the [URL](http://147.182.172.217:42100/v100000000) to download a file for me. However, the next URL with one more zero: `http://147.182.172.217:42100/v1000000000` would give me the message:
+
+```
+version not found
+```
+
+After that I decided a write a script for me to perform a sort of binary search to find the number that is in between the two limits that I have set. I thought about automating this process so that I would send a web request with my script and based on the response I change my limits. However of course I was too lazy so I kept inputting the version my program spit out by hand into the url and would change the variables myself accordingly. Pretty much the general idea is that if we do get a version back and it downloads a file, that is the new `min_limit` and if the website responds with 'version not found' we update the `max_limit`.
+
+```python
+min_limit = 100000000
+max_limit = 1000000000
+halfway = int(((max_limit - min_limit) / 2) + min_limit)
+print(halfway)
+```
+
+This is the short script that I use to get my middle number. After that I just go the website and replace the version in the url with the number my program prints, check what response I get from the website and update min and max limit accordingly, and just rinse and repeat. Eventually the version number `133791021` downloaded a file called `flag`. Then just run strings or cat on it like this:
+
+`strings flag` or `cat flag`
+
+and boom, our flag is in there. There's definitely a much more optimized way to do this especially if you can automate updating the max and min limits, but this method works and got me the flag which is what matters. Anyways here's the flag, enjoy!
+
+Flag: `flag{h0w_l0ng_wher3_y0u_g0ne_f0r_3910512832}`
+
+Full Script:
+
+```python
+min_limit = 133791015
+max_limit = 133791027
+
+halfway = int(((max_limit - min_limit) / 2) + min_limit)
+
+print("Version can be: " + str(min_limit))
+print("Version can't be: " + str(max_limit))
+print("In the middle: " + str(halfway))
+```

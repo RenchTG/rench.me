@@ -1,12 +1,11 @@
 ---
 import Breadcrumbs from '@/components/Breadcrumbs.astro'
 import Container from '@components/Container.astro'
-import ProjectCard from '@components/ProjectCard.astro'
+import Link from '@components/Link.astro'
 import { SITE } from '@consts'
 import Layout from '@layouts/Layout.astro'
-import { getCollection } from 'astro:content'
-
-const projects = await getCollection('projects')
+import { Image } from 'astro:assets'
+import climbing from '../../public/static/climbing.jpg'
 ---
 
 <Layout title="About" description={SITE.DESCRIPTION}>
@@ -15,16 +14,39 @@ const projects = await getCollection('projects')
 
     <section>
       <div class="min-w-full">
-        <h1 class="mb-4 text-3xl font-bold">Some more about us</h1>
-        <p class="prose prose-neutral mb-8 dark:prose-invert">
-          {SITE.TITLE} is an opinionated, no-frills static blogging template built
-          with Astro.
-        </p>
+        <h1 class="mb-4 text-3xl font-bold">About Me</h1>
+        <div class="prose h-full max-w-none dark:prose-invert">
+          <Image src={climbing} alt="Philip Dobranowski" class="rounded-md" />
+          <p>
+            Hi! I'm Philip, but go by the name Rench online. I'm currently a
+            freshman at Georgia Tech studying CS.
+          </p>
+          <p>
+            I'm interested in anything from competitive rock climbing to drawing
+            to computers. Right now, I spend most of my time in cybersecurity
+            with a little bit of software dev here and there.
+          </p>
+          <p>
+            My cybersecurity journey has mostly taken the the form of
+            Capture-the-Flag competitions (CTFs). I currently play with <Link
+              href="https://ctftime.org/team/175828">View Source</Link
+            >, <Link href="https://ctftime.org/team/222911">.;,;.</Link>, and <Link
+              href="https://ctftime.org/team/169557">Project Sekai</Link
+            >, focusing on the categories binary exploitation and reverse
+            engineering. In the future, I hope to expand my horizons in the
+            field and meet new people in the community.
+          </p>
+          <p>
+            Feel free to check out my <Link href="/blog">blog</Link>, where I'll
+            be posting future writeups that I make as well as any other tidbits
+            I come across and find interesting.
+          </p>
+        </div>
 
-        <h2 class="mb-4 text-2xl font-semibold">Our Projects</h2>
+        <!-- <h2 class="mb-4 mt-8 text-2xl font-semibold">My Projects</h2>
         <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => <ProjectCard project={project} />)}
-        </div>
+        </div> -->
       </div>
     </section>
   </Container>

@@ -5,7 +5,8 @@ import Link from '@components/Link.astro'
 import MobileMenu from '@components/ui/mobile-menu'
 import { NAV_LINKS, SITE } from '@consts'
 import { Image } from 'astro:assets'
-import logo from '../../public/static/logo.svg'
+import logoDark from '../../public/static/header-icon-dark.svg'
+import logoLight from '../../public/static/header-icon-light.svg'
 ---
 
 <header
@@ -18,8 +19,13 @@ import logo from '../../public/static/logo.svg'
         href="/"
         class="flex flex-shrink-0 items-center gap-2 text-xl font-semibold transition-colors duration-300 hover:text-primary"
       >
-        <Image src={logo} alt="Logo" class="size-8" />
-        {SITE.TITLE}
+        <Image src={logoLight} alt="Logo" class="h-auto w-16 dark:hidden" />
+        <Image
+          src={logoDark}
+          alt="Logo"
+          class="hidden h-auto w-16 dark:block"
+        />
+        <span id="site-title" class="hidden">{SITE.TITLE}</span>
       </Link>
       <div class="flex items-center gap-2 md:gap-4">
         <nav class="hidden items-center gap-4 text-sm sm:gap-6 md:flex">
@@ -40,3 +46,16 @@ import logo from '../../public/static/logo.svg'
     </div>
   </Container>
 </header>
+
+<script>
+  function updateSiteTitle() {
+    const siteTitle = document.getElementById('site-title')
+    if (siteTitle) {
+      siteTitle.classList.toggle('hidden', window.location.pathname === '/')
+    }
+  }
+
+  updateSiteTitle()
+
+  document.addEventListener('astro:after-swap', updateSiteTitle)
+</script>

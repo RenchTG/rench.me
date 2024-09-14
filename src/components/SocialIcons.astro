@@ -46,9 +46,12 @@ const getSocialLink = ({ href, label }: SocialLink) => ({
             href={href}
             aria-label={ariaLabel}
             title={ariaLabel}
-            class={buttonVariants({ variant: 'outline', size: 'icon' })}
+            class={cn(
+              buttonVariants({ variant: 'outline', size: 'icon' }),
+              'group',
+            )}
           >
-            <Icon className="size-4" />
+            <Icon className="size-4 group-hover:text-primary transition-colors" />
           </Link>
         </li>
       )

@@ -12,24 +12,24 @@ export type Link = {
 }
 
 export const SITE: Site = {
-  TITLE: 'astro-erudite',
+  TITLE: 'Philip Dobranowski',
   DESCRIPTION:
-    'astro-erudite is a opinionated, no-frills blogging template—built with Astro, Tailwind, and shadcn/ui.',
-  EMAIL: 'jason@enscribe.dev',
-  NUM_POSTS_ON_HOMEPAGE: 2,
-  SITEURL: 'https://astro-erudite.vercel.app',
+    "Philip Dobranowski's personal website and blog. Home to security and software tomfoolery.",
+  EMAIL: 'philip@rench.me',
+  NUM_POSTS_ON_HOMEPAGE: 4,
+  SITEURL: 'https://rench.me',
 }
 
 export const NAV_LINKS: Link[] = [
+  { href: '/', label: 'home' },
   { href: '/blog', label: 'blog' },
-  { href: '/authors', label: 'authors' },
   { href: '/about', label: 'about' },
-  { href: '/tags', label: 'tags' },
 ]
 
 export const SOCIAL_LINKS: Link[] = [
-  { href: 'https://github.com/jktrn', label: 'GitHub' },
-  { href: 'https://twitter.com/enscry', label: 'Twitter' },
-  { href: 'jason@enscribe.dev', label: 'Email' },
+  { href: 'https://github.com/RenchTG', label: 'GitHub' },
+  { href: 'https://linkedin.com/in/philip-dobranowski', label: 'LinkedIn' },
+  { href: 'philip@rench.me', label: 'Email' },
+  { href: 'https://twitter.com/RenchTG', label: 'Twitter' },
   { href: '/rss.xml', label: 'RSS' },
 ]
