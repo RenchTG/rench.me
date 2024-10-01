@@ -3,6 +3,7 @@ export type Site = {
   DESCRIPTION: string
   EMAIL: string
   NUM_POSTS_ON_HOMEPAGE: number
+  POSTS_PER_PAGE: number
   SITEURL: string
 }
 
@@ -17,6 +18,7 @@ export const SITE: Site = {
     "Philip Dobranowski's personal website and blog. Home to security and software tomfoolery.",
   EMAIL: 'philip@rench.me',
   NUM_POSTS_ON_HOMEPAGE: 4,
+  POSTS_PER_PAGE: 3,
   SITEURL: 'https://rench.me',
 }
 

@@ -1,50 +1,40 @@
 ---
-import { buttonVariants } from '@/components/ui/button'
-import AuthorCard from '@components/AuthorCard.astro'
-import BlogCard from '@components/BlogCard.astro'
-import Container from '@components/Container.astro'
-import Link from '@components/Link.astro'
-import { SITE } from '@consts'
-import Layout from '@layouts/Layout.astro'
-import { getCollection } from 'astro:content'
-
-const blog = (await getCollection('blog'))
-  .filter((post) => !post.data.draft)
-  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
-  .slice(0, SITE.NUM_POSTS_ON_HOMEPAGE)
-
-const philip = (await getCollection('authors')).find(
-  (author) => author.slug === 'philip',
-)
+import Link from '@/components/Link.astro'
+import SocialIcons from '@/components/SocialIcons.astro'
+import AvatarComponent from '@/components/ui/avatar'
+import { SITE, SOCIAL_LINKS } from '@/consts'
+import Layout from '@/layouts/Layout.astro'
 ---
 
 <Layout title="Home" description={SITE.DESCRIPTION}>
-  <Container class="flex flex-col gap-y-6">
-    <section>
-      {philip && <AuthorCard author={philip} />}
-    </section>
-    <section class="flex flex-col gap-y-4">
-      <h2 class="text-2xl font-bold">Latest posts</h2>
-      <ul class="not-prose flex flex-col gap-y-4">
-        {
-          blog.map((post) => (
-            <li>
-              <BlogCard entry={post} />
-            </li>
-          ))
-        }
-      </ul>
-      <div class="flex justify-center">
-        <Link
-          href="/blog"
-          class={buttonVariants({ variant: 'ghost' }) + ' group'}
-        >
-          See all posts <span
-            class="ml-1.5 transition-transform group-hover:translate-x-1"
-            >&rarr;</span
-          >
-        </Link>
+  <div class="flex h-[calc(100vh-200px)] items-center justify-center px-4">
+    <div
+      class="flex max-w-screen-lg flex-col items-center gap-6 md:flex-row md:gap-12"
+    >
+      <AvatarComponent
+        client:load
+        src="/static/climbing.jpg"
+        alt="Philip Dobranowski"
+        fallback="PD"
+        className="size-64 rounded-full"
+      />
+      <div class="grid gap-2 text-2xl md:gap-4 md:text-3xl">
+        <div class="text-center text-4xl font-bold md:text-left md:text-6xl">
+          Hey! 👋, I&apos;m Rench.
+        </div>
+        <div class="text-center text-gray-500 md:text-left dark:text-gray-400">
+          I&apos;m a CTF player and cybersecurity enthusiast. Feel free to check
+          out my <Link href="/about" underline class="text-primary">about</Link>
+          page or contact me at the links below!
+        </div>
+        <div class="mt-4 flex justify-center gap-4 md:justify-start md:gap-8">
+          <SocialIcons
+            links={SOCIAL_LINKS}
+            size="size-8"
+            buttonClassName="size-16"
+          />
+        </div>
       </div>
-    </section>
-  </Container>
+    </div>
+  </div>
 </Layout>

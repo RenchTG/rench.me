@@ -1,6 +1,6 @@
 ---
-import Container from '@components/Container.astro'
-import { SOCIAL_LINKS } from '@consts'
+import Container from '@/components/Container.astro'
+import { SOCIAL_LINKS } from '@/consts'
 import SocialIcons from './SocialIcons.astro'
 ---
 
@@ -10,7 +10,7 @@ import SocialIcons from './SocialIcons.astro'
       class="flex flex-col items-center justify-center gap-y-2 sm:flex-row sm:justify-between"
     >
       <div class="flex items-center">
-        <p class="text-sm text-muted-foreground">
+        <p class="text-center text-sm text-muted-foreground">
           &copy; {new Date().getFullYear()} Philip Dobranowski
         </p>
       </div>

@@ -1,5 +1,6 @@
 ---
-import { ChevronDown } from 'lucide-react'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Icon } from 'astro-icon/components'
 import TableOfContentsHeading from './TableOfContentsHeading.astro'
 
 export interface Heading {
@@ -41,51 +42,60 @@ function buildToc(headings: Heading[]): Heading[] {
     class="flex cursor-pointer items-center justify-between text-xl font-semibold"
   >
     Table of Contents
-    <ChevronDown
-      className="size-5 transition-transform group-open:rotate-180"
+    <Icon
+      name="lucide:chevron-down"
+      class="size-5 transition-transform group-open:rotate-180"
     />
   </summary>
   <nav>
-    <ul class="pt-3">
-      {toc.map((heading) => <TableOfContentsHeading heading={heading} />)}
-    </ul>
+    <ScrollArea className="h-fit max-h-[300px]" client:load type="always">
+      <ul class="pt-3">
+        {toc.map((heading) => <TableOfContentsHeading heading={heading} />)}
+      </ul>
+    </ScrollArea>
   </nav>
 </details>
 
 <nav
-  class="overflow-wrap-break-word sticky top-16 hidden h-0 w-[calc(50vw-50%-4rem)] translate-x-[calc(-100%-2em)] text-xs leading-4 xl:block"
+  class="sticky top-24 hidden h-0 w-[calc(50vw-50%-4rem)] translate-x-[calc(-100%-2em)] break-words text-xs leading-4 xl:block"
 >
-  <div class="mr-6 flex justify-end">
-    <ul
-      class="max-h-[calc(100vh-8rem)] space-y-2 overflow-y-auto"
-      id="toc-container"
-    >
-      <li>
-        <h2 class="mb-2 text-lg font-semibold">Table of Contents</h2>
-      </li>
-      {toc.map((heading) => <TableOfContentsHeading heading={heading} />)}
-    </ul>
+  <div class="mr-8 flex justify-end">
+    <ScrollArea className="h-[calc(100vh-8rem)]" client:load type="always">
+      <ul class="mr-8 flex flex-col justify-end gap-y-2" id="toc-container">
+        <li>
+          <h2 class="mb-2 text-lg font-semibold">Table of Contents</h2>
+        </li>
+        {toc.map((heading) => <TableOfContentsHeading heading={heading} />)}
+      </ul>
+    </ScrollArea>
   </div>
 </nav>
 
 <script>
   function setupToc() {
-    const observer = new IntersectionObserver((sections) => {
-      sections.forEach((section) => {
-        const heading = section.target.querySelector('h2, h3, h4, h5, h6')
-        if (!heading) return
+    const header = document.querySelector('header')
+    const headerHeight = header ? header.offsetHeight : 0
 
-        const id = heading.getAttribute('id')
-        const link = document.querySelector(
-          `#toc-container li a[href="#${id}"]`,
-        )
-        if (!link) return
+    const observer = new IntersectionObserver(
+      (sections) => {
+        sections.forEach((section) => {
+          const heading = section.target.querySelector('h2, h3, h4, h5, h6')
+          if (!heading) return
 
-        const addRemove = section.intersectionRatio > 0 ? 'add' : 'remove'
-        link.classList[addRemove]('font-semibold')
-        link.classList[addRemove]('text-primary')
-      })
-    })
+          const id = heading.getAttribute('id')
+          const link = document.querySelector(
+            `#toc-container li a[href="#${id}"]`,
+          )
+          if (!link) return
+
+          const addRemove = section.isIntersecting ? 'add' : 'remove'
+          link.classList[addRemove]('text-foreground')
+        })
+      },
+      {
+        rootMargin: `-${headerHeight}px 0px 0px 0px`,
+      },
+    )
 
     const sections = document.querySelectorAll('.prose section')
     sections.forEach((section) => {
