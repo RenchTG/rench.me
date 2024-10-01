@@ -177,7 +177,7 @@ A lot of this script is my pwninit template, but the most important content is i
 
 Then, run is relatively self explanatory. I first leak libc base in order to call system later in the rop chain and I leak a stack address to find main's return address which is where we'll be writing the rop chain. I then set everything up and write one byte at a time to the stack using my write function. After everything is written, return from main by sending an 'n' to the question and main will return and execute your rop chain. The script does take some time because we are writing byte by byte, but after some waiting that gets us a shell!
 
-![image](/static/images/blog-1.png)
+![image](blog-1.png)
 
 Overall, I had a lot of fun writing this challenge. It was simple, but did its job well. It ended at 19 solves, being in the middle of the pwn category in terms of number of solves and slightly harder than the average of all challenges. Hope you enjoyed it!
 
@@ -369,7 +369,7 @@ The shellcode is broken into three main parts:
 - The second part leaks elf base using the brk and nanosleep trick. First, the call to `brk` gives us the address of the end of the heap. The distance from the end of the data segment to the start of the heap does change due to ASLR, but it is generally relatively small and makes our bruteforce search method go much faster. Then, we start a loop from the start of the heap subtracting 0x1000 bytes at a time. We call `nanosleep` passing the address we want to test in rdi. Nanosleep has an interesting behavior where if an unmapped address is passed as an argument, it will return 0xfffffffffffffff2, while a mapped address will return 0xffffffffffffffea. Because everything from the data segment to the heap is unmapped, we know the first mapped address we hit will be in the data segment of the elf and will be a constant, relative offset from elf base.
 - The third part finds the "/bin/whoami" string as it was always 0x100 bytes ahead of the first mapped address we'd find with nanosleep. From there, we simply modify the bytes to be "/getflag" and then call execve and pass it in as a paramter. This prints our flag!
 
-![image](/static/images/blog-2.png)
+![image](blog-2.png)
 
 In the end, I had a lot of fun seeing players' unintendeds for this challenge and trying to patch them. Unfortunately, shellcode jails often open a lot of possibilities for players to find creative ways to break your challenge, but I think that's ok. It can be a good experience for both the player and author teaching each other new tricks that they may not have known before.
 

@@ -1,0 +1,184 @@
+# US Cyber Combine: StarTrek 1 Writeup
+**Writeup by:** Philip Dobranowski
+**Challenge Author:** DrBHacking
+**Challenge Description:** 
+You are a remote navigator directing Captain Kirk, who is commanding the USS Enterprise, and Captain Spock, who is commanding the USS Endeavour. Your mission is to guide them on a journey 100 galaxies away to an ancient, advanced civilization known as the "Architects" who have hidden a powerful artifact. This artifact, known as the "Quantum Key," has the potential to unlock new dimensions, granting unparalleled knowledge and power to its possessor...
+
+But your ships' warp drives are limited and as you journey through the galaxies, you discover that some contain ancient portal mechanisms that can instantly transport you to another galaxy. These portals are unpredictable and may send you further ahead (Slipstream Portals) or behind (Wormhole Portals) your current position. Can you strategically navigate these worlds and accomplish your mission on limited fuel?
+
+##
+
+In this challenge, we are provided a single binary named `startrek` and nothing else. From the challenge description, this looks like it will involve some sort of pathfinding to find the shortest route to guide our ships to the end. Let's run it and check it out!
+
+![image](https://hackmd.io/_uploads/ByU2xOaOA.png)
+
+After running it a couple times, I generally understood what was happening. We control two starships that the program will alternate between, each can jump a total of 5 times, occasionally we will run into slipstreams and wormholes that teleport us, and our goal is seemingly to help both ships reach galaxy 100. This is enough preliminary analysis, let's move onto static analysis! For this I will be using Binary Ninja (Binja).
+
+Luckily, the binary is not stripped so we still have symbol names. There are really only two functions being used, `main` and `jump`. First, I spent some time reading through `main` and tried to get a high level overview of how it worked. I was able to split up the function into three main parts that I'll explain below:
+
+Part 1:
+
+![image](https://hackmd.io/_uploads/HkJ7XOTOC.png)
+
+This part is responsible for setting up variables that seem to be used later in the function. Also, I had a hunch that the builtin_memcpy was copying the encrypted flag that would then be decoded later.
+
+Part 2:
+
+![image](https://hackmd.io/_uploads/rkbsQdpdC.png)
+
+This part was the main navigation logic and loop. This is where the program alternates between ships, asks for course heading, and calls `jump` in order to move our ships.
+
+Part 3:
+
+![image](https://hackmd.io/_uploads/S1OeV_6uA.png)
+
+The third and final part is what I call the win code. This part checks that both ships have reached the end and if so, runs many complex operations that seemingly decode the flag. For now, I will not be further reversing this code and will instead focus on triggering the conditions to make this section execute.
+
+Now that I had a high level understanding of how the program worked, I made a plan on how to solve it:
+**Step 1**: Better understand and cleanup the disassembly of the main navigation and jump logic, rename variables, and understand what we control.
+**Step 2**: Extract the map of slipstreams and wormholes. This will allow us to then use a pathfinding algorithm to search for the optimal routes for our two starships to take.
+**Step 3**: Figure out how we can control the trajectory of the ships to follow the routes generated in step 2. Guide the ships along and we should have our flag!
+
+Step 1 is difficult to show in a writeup, but I'll show the results. It involved a lot of running the program and sometimes debugging it in gdb to understand how variables were changing and being accessed. It also helped to have some of the printf statements such as `"Starship: %d\t Current Galaxy: %03d\tJumps Remaining: %d\n"` as this allowed me to easily find the variables storing the starship number, galaxy, and jumps and rename it accordingly. One of the big changes that helped was creating the Starship struct in Binja.
+
+![image](https://hackmd.io/_uploads/H1slvd6dA.png)
+
+I noticed that the program was storing all information about the starships in one location at various offsets, so creating the struct helped turn some decompilation such as this:
+
+![image](https://hackmd.io/_uploads/SJ4wwOp_C.png)
+
+into this:
+
+![image](https://hackmd.io/_uploads/B1Guw_6uR.png)
+
+Much nicer!
+
+Also, I found the exact trigger for the flag to be generated. Each starship object had an integer win check property. If galaxy 100 or greater was reached, this variable is set to 0xbaadd00d as seen in the above code. This is then checked outside of the navigation loop:
+
+![image](https://hackmd.io/_uploads/rkfj6_Tu0.png)
+
+If both variables were set to 0xbaadd00d, the flag generation code will trigger, otherwise we fail. However, the flag is never printed, but I assumed it to be stored somewhere in memory for us to find.
+
+Finally, I also figured out the three parameters that the jump function was taking in which I found to be the starship object, the distance to be traveled, and the map of the galaxy.
+
+![image](https://hackmd.io/_uploads/SyiowdpOR.png)
+
+`jump` is a much simpler function than main and seems to move the starship, check for a slipstream, check for a wormhole, decrease jumps remaining, and then return.
+
+Through my static analysis, I also learned that the map can be visualized as a number line of length 100. Scattered across this number line are slipstreams (that will send us forward) and wormholes (that will send us backwards). In 5 moves, both starships must go from position 0 to 100. That leads us nicely into step 2, finding the map!
+
+Due to my thorough static analysis, this wouldn't be difficult. We know the map is passed as the third argument into jump, so we can simply break on jump and print out. However, there was a problem...
+
+![image](https://hackmd.io/_uploads/rkwltuTuA.png)
+
+This is how map was being defined in main. It's 0x330 bytes in length which is 816 in decimal. But I thought we only needed 100 numbers :thinking_face:. After reading through `jump` again I understood what was happening.
+
+![image](https://hackmd.io/_uploads/Bk3rtuaOR.png)
+
+The first if statement checks for slipstreams. This will access an offset of map that is distance * 4 further. The multiplication by 4 makes sense as the slipstreams and wormholes are being stored as integers which take up 4 bytes.
+
+The else if statement then checks for wormholes. It accesses an offset of map that is (distance + 100) * 4 + 4 further. This is much more complex, but makes sense. With a distance of 0, this statement will check map+404 to see if a wormhole is there, and then continue with increments of 4 bytes.
+
+So this is what our map looks like:
+Bytes 0-404: 101 integers (representing the slipstreams from galaxies 0-100)
+Bytes 404-808: 101 integers (representing the wormholes from galaxies 0-100)
+
+Because we start at galaxy 0, our number line is actually 101 in length not 100 as I thought earlier. Also, we won't end up having one singular map, but two separate. I extracted them by using gdb, breaking on `jump`, and printing 101 integers:
+
+![image](https://hackmd.io/_uploads/S1W3h_puR.png)
+
+Here are the two maps I extracted:
+Slipstream map: ``[0, 0, 0, 0, 75, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 41, 0, 0, 0, 0, 0, 0, 0, 0, 50, 0, 0, 0, 0, 0, 0, 96, 0, 0, 0, 0, 0, 0, 0, 0, 82, 0, 0, 0, 0, 0, 0, 0, 0, 94, 0, 0, 0, 0, 0, 95, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]``
+Wormhole map: ``[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 30, 0, 0, 0, 0, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 41, 0, 0, 0, 0, 62, 0, 0, 0, 0, 0, 0, 67, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0]``
+
+With both maps in hand we can find the optimal path. After some work, I wrote this script that would find it:
+
+```python=
+def dfs(pos, depth, history, slipstreams, wormholes, jumps):
+    history.append(pos)
+    
+    if pos == 100:
+        print("WE WON")
+        print(f"{history} {jumps}")
+        return history
+      
+    if slipstreams[pos] != 0:
+        old = pos
+        pos = slipstreams[pos]
+        history.append(pos)
+        slipstreams[old] = 0
+    elif wormholes[pos] != 0:
+        old = pos
+        pos = wormholes[pos]
+        history.append(pos)
+        wormholes[old] = 0
+        
+    if depth == 5:
+        return
+    
+    for i in range(1,7):
+        if not (pos+i <= 100): continue
+        jumps.append(i)
+        dfs(pos+i, depth+1, history[:], slipstreams[:], wormholes[:], jumps[:])
+        jumps.pop()
+    
+    # print(history)
+    
+slipstreams = [0, 0, 0, 0, 75, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 41, 0, 0, 0, 0, 0, 0, 0, 0, 50, 0, 0, 0, 0, 0, 0, 96, 0, 0, 0, 0, 0, 0, 0, 0, 82, 0, 0, 0, 0, 0, 0, 0, 0, 94, 0, 0, 0, 0, 0, 95, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+wormholes = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 30, 0, 0, 0, 0, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 41, 0, 0, 0, 0, 62, 0, 0, 0, 0, 0, 0, 67, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0]
+dfs(0, 0, [], slipstreams, wormholes, [])
+```
+
+This recursively searches for all solutions of depth 5 and found two that reach 100!
+
+![image](https://hackmd.io/_uploads/By9IkYpdA.png)
+
+However, there is a problem. These two paths intersect, namely using the wormhole at 47 that jumps to 30 and the slipstream at 35 which jumps to 96. Normally, this would be fine, however, as we can see in the jump code:
+
+![image](https://hackmd.io/_uploads/SyVhkKa_C.png)
+
+Both slipstreams and wormholes are zeroed out after use. Only one starship can use them. But this was an easy fix! I zeroed out the slipstreams and wormholes in my array used in the first path of my script: `[0, 4, 75, 76, 41, 47, 30, 35, 96, 100]` and ran it again.
+
+![image](https://hackmd.io/_uploads/HyFLlKadA.png)
+
+Great! We now have two paths: `[0, 4, 75, 76, 41, 47, 30, 35, 96, 100]` and `[0, 5, 15, 19, 41, 47, 53, 94, 100]`. To go through these paths we must execute the following 5 jumps in our starships: `[4, 1, 6, 5, 4]` and `[5, 4, 6, 6, 6]`. Onto the final step, controlling our starships!
+
+My first thought was to investigate the "course heading" code. We are able to input a combination of a letter and digit, but how does this turn into a jump of distance 1-6?
+
+![image](https://hackmd.io/_uploads/Hyr4-KauR.png)
+
+In short... it doesn't. This course heading is read in using scanf and then simply used in a printf... No modification of the true distance value. This is also worrying, as it looked like the true distance value was being randomly generated! How are we supposed to control our ships then?
+
+For some time, I got sidetracked here by an interesting observation. We can input two characters into heading, which is then used as a printf format meaning it is vulnerable to printf leaks!
+
+![image](https://hackmd.io/_uploads/ry0gzFT_R.png)
+
+With an input of `%d` I thought we could leak the distance and have it randomly generate until it was a distance we were happy with. This unfortunately did not turn out to be the case. The numbers we could leak were always one of the following: ``[1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 16, 18, 20, 24, 25, 30, 36]``. These were actually equal to `distance * some_random_value`, so although our distance was a factor of the leaked number, it still had too much randomness in it to determine anything.
+
+In the end, randomness had won. I figured I could probably find the random seed and then simulate the randomness operations to predict what distances would show up, but this would be very time consuming. I opted for a different approach of dynamically setting the distance with gdb.
+
+![image](https://hackmd.io/_uploads/rkJISKpdA.png)
+
+In the decompilation, we see two variables rax_86 and rax_92 are generated based on randomness and then used to set distance. This distance is then passed to jump. However, if we change the value being moved into the distance variable directly, we can control it.
+
+![image](https://hackmd.io/_uploads/HkF9rYauR.png)
+
+We can look at the disassembly between the putchar and puts calls. A stack value `var_3cc_1` is moved into `eax`. This is then moved into another stack offset `rbp-0x3d8`, which is our distance variable, that is then no longer modified and used as our final jump parameter. So, if we break on the `mov dword ptr [rbp - 0x3d8], eax` instruction, directly set the value of rax with gdb, and then continue execution we can control our distance.
+
+![image](https://hackmd.io/_uploads/SJgjwFTdA.png)
+
+Here is an example of this. I reach the breakpoint, but the randomly generated distance happens to be 5. I want to jump 4, so I set rax to 4, continue execution, and we can see it will jump 4 times as we decided.
+
+I repeated this process 10 times setting rax to the following values for each starship as decided earlier:
+Starship 1: `[4, 1, 6, 5, 4]`
+Starship 2: `[5, 4, 6, 6, 6]`
+
+![image](https://hackmd.io/_uploads/ryvgtKT_R.png)
+
+After following this procedure, we passed the win check! The flag generation code is running! However, as stated earlier, the flag is never printed, so we must find it.
+
+I eventually broke at the last instruction of the flag generation code and found the flag in rcx! This also happens to be the same memory address that the encrypted bytes were copied into at the start of the program!
+
+![image](https://hackmd.io/_uploads/HJ9Dtt6_R.png)
+
+### Flag: USCGSIV{148c1252d_U_so1ved_it@Warp_Sp33d}
