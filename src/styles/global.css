@@ -89,6 +89,11 @@
       }
     }
 
+    /* Links */
+    a {
+      @apply text-primary underline;
+    }
+
     /* Inline code */
     :not(pre) > code {
       @apply relative rounded bg-muted/50 px-[0.3rem] py-[0.2rem] font-mono text-sm font-medium before:!content-none after:!content-none;

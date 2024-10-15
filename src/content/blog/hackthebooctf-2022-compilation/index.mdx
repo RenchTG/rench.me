@@ -11,11 +11,11 @@ draft: false
 
 - **Challenge Description**: After months of research, you're ready to attempt to infiltrate the meeting of a shadowy cult. Unfortunately, it looks like they've changed their password!
 
-### In-Depth Solution
+### Solution
 
 In this challenge, we are given a 64-bit binary which, if ran, asks us to provide a password. Opening this binary in Ghidra shows us the following code in main:
 
-![image](https://user-images.githubusercontent.com/91157382/199040147-dbfd1b06-d347-4b92-81a2-17ee899dae1d.png)
+![image](blog-1.png)
 
 We see that all the program is doing is simply prompting us for the password and comparing it with a string. If correct we get a shell! What's easy about this challenge is that the password they compare against is in plain-sight so we are able to take the password: `sup3r_s3cr3t_p455w0rd_f0r_u!`
 
@@ -29,13 +29,13 @@ Flag: `HTB{1nf1ltr4t1ng_4_cul7_0f_str1ng5}`
 
 **Challenge Description**: A powerful demon has sent one of his ghost generals into our world to ruin the fun of Halloween. The ghost can only be defeated by luck. Are you lucky enough to draw the right cards to defeat him and save this Halloween?
 
-### In-Depth Solution
+### Solution
 
 Simply playing around with the website did not render anything useful. Killing the ghost multiple times changed nothing, so it seemed to me that the description of the challenge wouldn't be very helpful.
 
 Looking into the code, however, was something interesting. In `routes.py`, we could see that a flask blueprint was being created, one web and the other api.
 
-![image](https://user-images.githubusercontent.com/91157382/199043471-cdecb36c-fe26-4ff7-a636-6541d914b844.png)
+![image](blog-2.png)
 
 Here, we can also see something very dangerous. The script compiles and then executes something using the three values of `current_health`, `operator`, and `attack_power`. So this looks like a code injection challenge. However, both `current_health` and `attack_power` get changed to integers, so it will be difficult to work with them. So, let's use the operator!
 
@@ -61,27 +61,29 @@ Sending that request gives us the flag!
 
 Flag: `HTB{c0d3_1nj3ct10ns_4r3_Gr3at!!}`
 
+---
+
 ## Spookifier
 
 - **Challenge Description**: There's a new trend of an application that generates a spooky name for you. Users of that application later discovered that their real names were also magically changed, causing havoc in their life. Could you help bring down this application?
 
-### In-Depth Solution
+### Solution
 
 The website given to us is pretty simple. A textbox and whenever text is entered, it gets changed into four different fonts. Looking at the source code provided we can see in util.py that all of the four fonts are created. What is interesting is that only the fourth font supports any meaningful characters that would allow us to perform some type of injection, so most likely we will be focusing on the fourth box.
 
 Next, I wanted to know how our input was being processed, to help figure out how we can exploit it. Eventually I found in `routes.py` this:
 
-![image](https://user-images.githubusercontent.com/91157382/199048755-21029b82-22a0-4822-bbcb-70e3d0488b0a.png)
+![image](blog-3.png)
 
 `return render_template('index.html',output=converted)` this line is what caught my eye. Not knowing much I Googled `render_template` vulnerabilities. I quickly found many sources that pointed to SSTI (server-side template injection).
 
-![image](https://user-images.githubusercontent.com/91157382/199049879-31c9bf41-c2ac-4288-94c1-807439045afa.png)
+![image](blog-4.png)
 
 For example, the image above shows different injections you can test to figure out what is running on the server. The simplest one `${7*7}` did in fact work and the fourth textbox showed 49. So, we've identified the vulnerability.
 
 Additionally, the source code already tells us which version of flask we are using, so we don't have to do all that testing! More Googling eventually led me to [this link](https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Server%20Side%20Template%20Injection/README.md) which has an incredible list of different SSTI injections. Going down to the `mako` section, we have a bunch of different ways to access the `os` module with our injection.
 
-![image](https://user-images.githubusercontent.com/91157382/199051101-16160db1-b9db-4204-b22b-cb5d636eb339.png)
+![image](blog-5.png)
 
 The very first injection provided seemed to be working and eventually I was able to get this input to work:
 
@@ -97,7 +99,7 @@ Flag: `HTB{t3mpl4t3_1nj3ct10n_1s_$p00ky!!}`
 
 - **Challenge Description**: "I told them it was too soon and in the wrong season to deploy such a website, but they assured me that theming it properly would be enough to stop the ghosts from haunting us. I was wrong." Now there is an internal breach in the Spooky Network and you need to find out what happened. Analyze the the network traffic and find how the scary ghosts got in and what they did.
 
-### In-Depth Solution
+### Solution
 
 This file gave us a simple `.pcap` file with many TCP and HTTP requests. I first extracted HTTP objects and saw many different images, scripts, HTML documents, etc. Everything that would make a good and simple website. However, I also saw three data files that looked like commands run on a shell. The commands were `whoami`, `id`, and an installation of `socat`.
 
@@ -109,7 +111,7 @@ One thing that is also important to note here. At the beginning, most of the TCP
 
 Looking through all of the HTTP packets showed nothing interesting, other than the context for what happened and what was exploited. However the TCP packets at the end of the file contain many of the commands that are run on the server. In one of them we see:
 
-![image](https://user-images.githubusercontent.com/91157382/199054256-c4f64024-4947-4060-9405-9f3ca67e4108.png)
+![image](blog-6.png)
 
 That looks like base64 to me. Sure enough if we reverse the string and decode it from base64, we get the flag.
 

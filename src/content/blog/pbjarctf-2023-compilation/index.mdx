@@ -22,7 +22,7 @@ draft: false
 
 </details>
 
-### In-Depth Solution
+### Solution
 
 This challenge is surprsingly the second to least solved challenge in the misc category _excluding survey_ which I thought was kind of weird as I had less trouble with it than some of the other misc challenges. Anyways I digress, here's my solution.
 
@@ -56,7 +56,7 @@ Flag: `flag{0.009672680170055}`
 
 </details>
 
-### In-Depth Solution
+### Solution
 
 So after looking through the files we have provided we can see that `script.py` reads in `flag.txt` and `nums.txt` and then generates `out.txt`. `Out.txt` prints out an $n$ value, $e$ value, and `ct` value so we know this is RSA. A lot of other solutions that I found for this challenge used factor calculators for a long time or factorDB now that someone uploaded the factors into it. However that's cringe and we like to do the intended solution around here 😎. (Note: I did talk to the challenge author and this method is the intended sol).
 
@@ -198,7 +198,7 @@ print(flag)
 
 </details>
 
-### In-Depth Solution
+### Solution
 
 This challenge starts off with the website looking identical to the first `ProgrammersHateProgramming` challenge, but the source code provided is a little bit different. Pretty much as the description says, more filters. To start off I always like getting the `str_replace_first` filters out of the way to make writing the rest of my XSS injection easier. For now my injection just looks like this:
 
@@ -245,7 +245,7 @@ Flag: `flag{wow_that_was_a_lot_of_filters_anyways_how_about_that_meaningful_conn
 
 </details>
 
-### In-Depth Solution
+### Solution
 
 So when we first open up the image we just see a simple stegosaurus, but there must be more here 👀. The challenge is definitely something steganography related so I quickly googled common steganography tools. I ended up finding this tool called steghide where you can simply run a command in the terminal and it should extract the hidden data ... right?
 
@@ -311,14 +311,14 @@ with open("rockyou.txt", "r") as my_file:
 
 </details>
 
-### In-Depth Solution
+### Solution
 
 So to start off we go to the website on the link provided and a weird file is downloaded. It has a bunch of non-readable text on it, but some is readable. On it though we can find a link that takes us to download version 2. Once we click the link to version 2 we download another file and in there we get a link to version 3. This will repeat over and over again. Our goal as the description states is to find the newest one. I start off by playing around with the url and I realize that I can change the url to get whatever version number I put in. I then proceed to find the limits of the version by just adding zeroes.
 
 Eventually I get the [URL](http://147.182.172.217:42100/v100000000) to download a file for me. However, the next URL with one more zero: `http://147.182.172.217:42100/v1000000000` would give me the message:
 
 ```
-version not found
+ version not found
 ```
 
 After that I decided a write a script for me to perform a sort of binary search to find the number that is in between the two limits that I have set. I thought about automating this process so that I would send a web request with my script and based on the response I change my limits. However of course I was too lazy so I kept inputting the version my program spit out by hand into the url and would change the variables myself accordingly. Pretty much the general idea is that if we do get a version back and it downloads a file, that is the new `min_limit` and if the website responds with 'version not found' we update the `max_limit`.
