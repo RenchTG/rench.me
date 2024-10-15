@@ -57,7 +57,7 @@ Eventually after being stuck for a while a teammate of mine said: "I think this 
 
 Our `b` value starts at a lowly 1 in binary. We need to eventually shift it to be 100, to be 4, however as said earlier the 'walls' of 1s in the constant c block us. If our singular bit ever lines up with a 1 bit in the `c` constant, the result of `b&c` will be nonzero, multiplied by 1125899906842622, and completely mess up our quest to reach 4. So, our goal is to shift our single bit around in a way to reach 4 and along its journey it can never line up with a 1 bit in the constant c.
 
-To visualize this idea I made a simple game in python. I have included the [file `game.py`](game.py) if you would like to try for yourself, but for the purpose of the writeup I will just be showing screenshots. In the game our bit is marked by the '`X`' character and has 4 possible moves, '`q`', '`w`', '`e`', and '`r`'. Our character can move 50 bits left, 1 bit left, 1 bit right, and 50 bits right respectively. The goal is to move our bit from its starting position as the last bit, to reach the third to last bit:
+To visualize this idea I made a simple game in python. I have included the [file `game.py`](https://github.com/RenchTG/CTF-writeups/blob/main/HSCTF_10/1125899906842622/game.py) if you would like to try for yourself, but for the purpose of the writeup I will just be showing screenshots. In the game our bit is marked by the '`X`' character and has 4 possible moves, '`q`', '`w`', '`e`', and '`r`'. Our character can move 50 bits left, 1 bit left, 1 bit right, and 50 bits right respectively. The goal is to move our bit from its starting position as the last bit, to reach the third to last bit:
 
 ![image](blog-1.png)
 
