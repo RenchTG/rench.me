@@ -25,7 +25,6 @@ import logoLight from '../../public/static/header-icon-light.svg'
           alt="Logo"
           class="hidden h-auto w-16 dark:block"
         />
-        <span id="site-title" class="hidden">{SITE.TITLE}</span>
       </Link>
       <div class="flex items-center gap-2 md:gap-4">
         <nav class="hidden items-center gap-4 text-sm sm:gap-6 md:flex">
@@ -46,16 +45,3 @@ import logoLight from '../../public/static/header-icon-light.svg'
     </div>
   </Container>
 </header>
-
-<script>
-  function updateSiteTitle() {
-    const siteTitle = document.getElementById('site-title')
-    if (siteTitle) {
-      siteTitle.classList.toggle('hidden', window.location.pathname === '/')
-    }
-  }
-
-  updateSiteTitle()
-
-  document.addEventListener('astro:after-swap', updateSiteTitle)
-</script>
