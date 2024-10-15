@@ -8,8 +8,8 @@ draft: false
 ---
 
 ## Binary Blast
-**Challenge Author:** LMS
-**Challenge Description:** Ready for a blast from the past? Navigate the MIPS landscape and watch out for those sneaky format strings. Beware of fake flags—only the real one will do!
+- **Challenge Author:** LMS
+- **Challenge Description:** Ready for a blast from the past? Navigate the MIPS landscape and watch out for those sneaky format strings. Beware of fake flags—only the real one will do!
 
 ### Solution
 
@@ -98,7 +98,7 @@ c
 ```
 This would immediately land us in a breakpoint at main, by simply running `gdb-multiarch chall -x gdbscript` in another terminal window after our connection. I then wrote the following script:
 
-```python=
+```python
 from pwn import *
 import time
 
@@ -198,7 +198,7 @@ Instead of writing shellcode to spawn a shell, we could write shorter shellcode 
 
 So to execute a syscall in MIPS we put the syscall number in $v0, all the arguments in $a0, $a1, ... and then execute the syscall instruction. To do this with read, we must use syscall number 4003 or 0xfa3 in hex. Now, let's write some shellcode!
 
-```asm=
+```asm
 lui $v0, 0x0
 ori $v0, 4003
 lui $a0, 0x0
@@ -220,7 +220,7 @@ Almost! All of the instructions are there except for syscall. It turns out the b
 
 Now it works! We can trigger the read syscall and read to anywhere we'd like. Now the question is where? But this is simple! We can simply read the bytes into the very next instruction that will be executed which is `0x2b2abe14`. I updated the full script to now look like this:
 
-```python=
+```python
 from pwn import *
 import time
 
@@ -285,7 +285,7 @@ Ah this must be the fake flag we were warned about. But no worries we have a she
 
 We are greeted with the real flag in the root directory! It references the lack of ASLR and NX caused by qemu which made our exploit much simpler.
 
-### Flag: `SIVUSCG{Seems_That_QEMU_Is_Missing_Protections}`
+Flag: `SIVUSCG{Seems_That_QEMU_Is_Missing_Protections}`
 
 ---
 
@@ -518,7 +518,7 @@ All that's left is to exit and enjoy our shell!
 The flag mentions FOP, though we were able to avoid that with the unintended. It's always important to remember that many security features are lost in qemu.
 
 ### Full script:
-```python=
+```python
 from pwn import *
 
 elf = ELF("./chall_patched",checksec=0)
@@ -625,7 +625,7 @@ def run():
 run()
 ```
 
-### Flag: `SIVUSCG{FOP_TILL_YOU_DROP}`
+Flag: `SIVUSCG{FOP_TILL_YOU_DROP}`
 
 ---
 
@@ -718,12 +718,12 @@ Because we start at galaxy 0, our number line is actually 101 in length not 100 
 ![image](blog-55.png)
 
 Here are the two maps I extracted:
-Slipstream map: ``[0, 0, 0, 0, 75, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 41, 0, 0, 0, 0, 0, 0, 0, 0, 50, 0, 0, 0, 0, 0, 0, 96, 0, 0, 0, 0, 0, 0, 0, 0, 82, 0, 0, 0, 0, 0, 0, 0, 0, 94, 0, 0, 0, 0, 0, 95, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]``
-Wormhole map: ``[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 30, 0, 0, 0, 0, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 41, 0, 0, 0, 0, 62, 0, 0, 0, 0, 0, 0, 67, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0]``
+- Slipstream map: ``[0, 0, 0, 0, 75, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 41, 0, 0, 0, 0, 0, 0, 0, 0, 50, 0, 0, 0, 0, 0, 0, 96, 0, 0, 0, 0, 0, 0, 0, 0, 82, 0, 0, 0, 0, 0, 0, 0, 0, 94, 0, 0, 0, 0, 0, 95, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]``
+- Wormhole map: ``[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 30, 0, 0, 0, 0, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 41, 0, 0, 0, 0, 62, 0, 0, 0, 0, 0, 0, 67, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0]``
 
 With both maps in hand we can find the optimal path. After some work, I wrote this script that would find it:
 
-```python=
+```python
 def dfs(pos, depth, history, slipstreams, wormholes, jumps):
     history.append(pos)
     
@@ -811,4 +811,4 @@ I eventually broke at the last instruction of the flag generation code and found
 
 ![image](blog-65.png)
 
-### Flag: `USCGSIV{148c1252d_U_so1ved_it@Warp_Sp33d}`
+Flag: `USCGSIV{148c1252d_U_so1ved_it@Warp_Sp33d}`
