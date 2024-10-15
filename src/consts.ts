@@ -17,10 +17,10 @@ export const SITE: Site = {
   TITLE: 'Philip Dobranowski',
   DESCRIPTION:
     "Philip Dobranowski's personal website and blog. Home to security and software tomfoolery.",
-  EMAIL: 'philip@rench.me',
+  EMAIL: 'contact@philipdobranowski.com',
   NUM_POSTS_ON_HOMEPAGE: 4,
   POSTS_PER_PAGE: 20,
-  SITEURL: 'https://rench.me',
+  SITEURL: 'https://philipdobranowski.com',
 }
 
 export const NAV_LINKS: Link[] = [
@@ -33,7 +33,7 @@ export const NAV_LINKS: Link[] = [
 export const SOCIAL_LINKS: Link[] = [
   { href: 'https://github.com/RenchTG', label: 'GitHub', external: true },
   { href: 'https://linkedin.com/in/philip-dobranowski', label: 'LinkedIn', external: true },
-  { href: 'philip@rench.me', label: 'Email', external: true },
+  { href: 'contact@philipdobranowski.com', label: 'Email', external: true },
   { href: 'https://twitter.com/RenchTG', label: 'Twitter', external: true },
   { href: '/rss.xml', label: 'RSS', external: true },
 ]

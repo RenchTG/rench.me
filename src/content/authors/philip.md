@@ -6,5 +6,5 @@ bio: "I'm a cybersecurity enthusiast, CTF player, and software developer. Feel f
 linkedin: 'https://linkedin.com/in/philip-dobranowski'
 github: 'https://github.com/RenchTG'
 twitter: 'https://twitter.com/RenchTG'
-mail: 'philip@rench.me'
+mail: 'contact@philipdobranowski.com'
 ---
