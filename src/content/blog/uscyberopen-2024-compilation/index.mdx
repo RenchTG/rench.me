@@ -517,7 +517,7 @@ All that's left is to exit and enjoy our shell!
 
 The flag mentions FOP, though we were able to avoid that with the unintended. It's always important to remember that many security features are lost in qemu.
 
-### Full script:
+**Full script:**
 ```python
 from pwn import *
 
@@ -646,19 +646,19 @@ After running it a couple times, I generally understood what was happening. We c
 
 Luckily, the binary is not stripped so we still have symbol names. There are really only two functions being used, `main` and `jump`. First, I spent some time reading through `main` and tried to get a high level overview of how it worked. I was able to split up the function into three main parts that I'll explain below:
 
-Part 1:
+**Part 1:**
 
 ![image](blog-45.png)
 
 This part is responsible for setting up variables that seem to be used later in the function. Also, I had a hunch that the builtin_memcpy was copying the encrypted flag that would then be decoded later.
 
-Part 2:
+**Part 2:**
 
 ![image](blog-46.png)
 
 This part was the main navigation logic and loop. This is where the program alternates between ships, asks for course heading, and calls `jump` in order to move our ships.
 
-Part 3:
+**Part 3:**
 
 ![image](blog-47.png)
 
