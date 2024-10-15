@@ -13,16 +13,16 @@ import Layout from '@/layouts/Layout.astro'
     >
       <AvatarComponent
         client:load
-        src="/static/climbing.jpg"
+        src="/static/logo.png"
         alt="Philip Dobranowski"
         fallback="PD"
         className="size-64 rounded-full"
       />
       <div class="grid gap-2 text-2xl md:gap-4 md:text-3xl">
         <div class="text-center text-4xl font-bold md:text-left md:text-6xl">
-          Hey! 👋, I&apos;m Rench.
+          Hey! 👋, I&apos;m Philip.
         </div>
-        <div class="text-center text-gray-500 md:text-left dark:text-gray-400">
+        <div class="text-center text-2xl text-gray-500 md:text-left dark:text-gray-400">
           I&apos;m a CTF player and cybersecurity enthusiast. Feel free to check
           out my <Link href="/about" underline class="text-primary">about</Link>
           page or contact me at the links below!
@@ -30,7 +30,7 @@ import Layout from '@/layouts/Layout.astro'
         <div class="mt-4 flex justify-center gap-4 md:justify-start md:gap-8">
           <SocialIcons
             links={SOCIAL_LINKS}
-            size="size-8"
+            size="size-6"
             buttonClassName="size-16"
           />
         </div>
