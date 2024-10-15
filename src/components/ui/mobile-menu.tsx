@@ -45,6 +45,7 @@ const MobileMenu = () => {
           <DropdownMenuItem key={item.href} asChild>
             <a
               href={item.href}
+              target={item.external ? '_blank' : '_self'}
               className="w-full text-lg font-medium capitalize"
               onClick={() => setIsOpen(false)}
             >

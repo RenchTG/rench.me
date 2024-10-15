@@ -32,6 +32,7 @@ import logoLight from '../../public/static/header-icon-light.svg'
             NAV_LINKS.map((item) => (
               <Link
                 href={item.href}
+                target={item.external ? '_blank' : '_self'}
                 class="capitalize text-foreground/60 transition-colors hover:text-foreground/80"
               >
                 {item.label}
