@@ -10,7 +10,7 @@ export type Site = {
 export type Link = {
   href: string
   label: string
-  external?: boolean
+  external: boolean
 }
 
 export const SITE: Site = {
@@ -24,16 +24,16 @@ export const SITE: Site = {
 }
 
 export const NAV_LINKS: Link[] = [
-  { href: '/', label: 'home' },
-  { href: '/about', label: 'about' },
-  { href: '/blog', label: 'blog' },
+  { href: '/', label: 'home', external: false },
+  { href: '/about', label: 'about', external: false },
+  { href: '/blog', label: 'blog', external: false },
   { href: 'https://drive.google.com/file/d/17pWDOVYT3xJjryri4AMpAKr44AtB8gp1/view?usp=sharing', label: 'resume', external: true },
 ]
 
 export const SOCIAL_LINKS: Link[] = [
-  { href: 'https://github.com/RenchTG', label: 'GitHub' },
-  { href: 'https://linkedin.com/in/philip-dobranowski', label: 'LinkedIn' },
-  { href: 'philip@rench.me', label: 'Email' },
-  { href: 'https://twitter.com/RenchTG', label: 'Twitter' },
-  { href: '/rss.xml', label: 'RSS' },
+  { href: 'https://github.com/RenchTG', label: 'GitHub', external: true },
+  { href: 'https://linkedin.com/in/philip-dobranowski', label: 'LinkedIn', external: true },
+  { href: 'philip@rench.me', label: 'Email', external: true },
+  { href: 'https://twitter.com/RenchTG', label: 'Twitter', external: true },
+  { href: '/rss.xml', label: 'RSS', external: true },
 ]
