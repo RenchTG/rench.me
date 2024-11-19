@@ -91,7 +91,7 @@ Our A would be `0x2b2ab114` and our B would be `0x2b2ab0f0`. Next, we had to fin
 The payload of `%4$s` stored our input at the address in `0x2b2ab0e0` and each consecutive positional argument would increment by 4 bytes on the stack. Mapping this out got our values of A to be 17 which would write to `0x2b2ab0f0` and then B was 8 which would write to whatever address was being stored at `0x2b2ab0f0`. Let's try it out.
 
 However, to test this, we would need a proper script setup to send addresses through the connection. For this, I decided to start testing on the docker. I modified the Dockerfile to add the `-g 1234` flag, so we can debug it. I also wrote a file `gdbscript` with the following contents:
-```
+```text
 target remote :1234
 b main
 c
@@ -177,7 +177,7 @@ Luckily, pwntools has support for MIPS, so shellcraft will work well. Let's run 
 Hmm, the instruction `lui $zero, 0xbdec` was written correctly and seems to execute well without a segfault. This means we can execute code on the stack! However, there should be many more instructions as a part of shellcraft.sh(), so what went wrong...
 
 The entire shellcraft payload printed out is: 
-```
+```text
 <\t//5)bi\xaf\xa9\xff\xf4<\tn/5)sh\xaf\xa9\xff\xf8\xaf\xa0\xff\xfc'\xbd\xff\xf4\x03\xa0<\x19\x8c
 \x9779\xff\xff\x03H'\xaf\xa9\xff\xfc'\xbd\xff\xfc(\x05\xff\xff\xaf\xa5\xff\xfc#\xbd\xff\xfc$\x19\xff
 \xfb\x03('\x03\xa5(\xaf\xa5\xff\xfc#\xbd\xff\xfc\x03\xa0(\xaf\xa0\xff\xfc'\xbd\xff\xfc(\x06\xff\xff

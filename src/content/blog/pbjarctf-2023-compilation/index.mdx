@@ -317,8 +317,8 @@ So to start off we go to the website on the link provided and a weird file is do
 
 Eventually I get the [URL](http://147.182.172.217:42100/v100000000) to download a file for me. However, the next URL with one more zero: `http://147.182.172.217:42100/v1000000000` would give me the message:
 
-```
- version not found
+```text
+version not found
 ```
 
 After that I decided a write a script for me to perform a sort of binary search to find the number that is in between the two limits that I have set. I thought about automating this process so that I would send a web request with my script and based on the response I change my limits. However of course I was too lazy so I kept inputting the version my program spit out by hand into the url and would change the variables myself accordingly. Pretty much the general idea is that if we do get a version back and it downloads a file, that is the new `min_limit` and if the website responds with 'version not found' we update the `max_limit`.

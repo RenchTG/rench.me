@@ -248,7 +248,7 @@ This isn't really helpful to us and opening this file in a hex editor doesn't sh
 
 However normal extraction methods were not retrieving secret.txt. I figured there were probably some `.zip` repair tools that could help me fix the `.zip` rather than editing it manually. Eventually, I stumbled upon the built-in feature to the `zip` command using the flag `-FF`. So I ran:
 
-```
+```text
 zip -FF message.zip --out fixed.zip
 ```
 
