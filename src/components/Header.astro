@@ -3,7 +3,7 @@ import Container from '@/components/Container.astro'
 import Link from '@/components/Link.astro'
 import MobileMenu from '@/components/ui/mobile-menu'
 import { ModeToggle } from '@/components/ui/mode-toggle'
-import { NAV_LINKS, SITE } from '@/consts'
+import { NAV_LINKS } from '@/consts'
 import { Image } from 'astro:assets'
 import logoDark from '../../public/static/header-icon-dark.svg'
 import logoLight from '../../public/static/header-icon-light.svg'
@@ -32,7 +32,7 @@ import logoLight from '../../public/static/header-icon-light.svg'
             NAV_LINKS.map((item) => (
               <Link
                 href={item.href}
-                target={item.external ? '_blank' : '_self'}
+                target={item.external}
                 class="capitalize text-foreground/60 transition-colors hover:text-foreground/80"
               >
                 {item.label}
