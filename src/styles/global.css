@@ -67,7 +67,12 @@
 
 @layer components {
   article {
-    @apply prose-headings:scroll-mt-20 prose-headings:break-words prose-p:break-words prose-a:!break-words prose-a:!decoration-muted-foreground prose-a:underline-offset-[3px] prose-a:transition-colors hover:prose-a:!decoration-foreground prose-pre:!px-0 prose-img:mx-auto;
+    @apply prose-headings:scroll-mt-20 prose-headings:break-words prose-p:break-words prose-a:!break-words prose-pre:!px-0 prose-img:mx-auto;
+
+    /* Blog post link styling */
+    a {
+      @apply decoration-muted-foreground underline-offset-[3px] transition-colors hover:decoration-foreground;
+    }
 
     .katex-display {
       @apply overflow-x-auto overflow-y-hidden py-4;
