@@ -67,7 +67,12 @@
 
 @layer components {
   article {
-    @apply prose-headings:scroll-mt-20 prose-headings:break-words prose-p:break-words prose-a:!break-words prose-pre:!px-0 prose-img:mx-auto prose-a:text-primary prose-a:decoration-primary/30 prose-a:underline-offset-[3px] prose-a:transition-colors hover:prose-a:decoration-primary;
+    @apply prose-headings:scroll-mt-20 prose-headings:break-words prose-p:break-words prose-a:!break-words prose-pre:!px-0 prose-img:mx-auto;
+
+    /* Blog post link styling */
+    .prose a {
+      @apply !text-primary !decoration-primary/30 !underline-offset-[3px] !transition-colors hover:!decoration-primary;
+    }
 
     .katex-display {
       @apply overflow-x-auto overflow-y-hidden py-4;
