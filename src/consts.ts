@@ -27,7 +27,7 @@ export const NAV_LINKS: Link[] = [
   { href: '/', label: 'home' },
   { href: '/about', label: 'about' },
   { href: '/blog', label: 'blog' },
-  { href: 'https://drive.google.com/file/d/17pWDOVYT3xJjryri4AMpAKr44AtB8gp1/view?usp=sharing', label: 'resume' },
+  { href: 'https://drive.google.com/file/d/17pWDOVYT3xJjryri4AMpAKr44AtB8gp1/view?usp=sharing', label: 'resume', external: true },
 ]
 
 export const SOCIAL_LINKS: Link[] = [
