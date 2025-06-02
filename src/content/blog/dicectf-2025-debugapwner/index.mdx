@@ -19,31 +19,31 @@ In this challenge, we are provided a Dockerfile, server.py, and an executable ca
 
 I'll try to go quickly through this challenge as the main focus is `debugapwner`. Essentially, in `debugalyzer` we are given two binaries `dwarf`, the same as `debugapwner`, and `main`. `main` is extremely simple and really does nothing on its own just printing and returning:
 
-![image](https://hackmd.io/_uploads/SkwJ2M9Mel.png)
+![image](1.png)
 
 All of the magic happens in `dwarf` with two key functions: `main` and `execute_dwarf_bytecode_v4`. `main` will read in another elf, call various functions to parse it like `gelf_getehdr`, search for the `.debug_line` section, and then call `execute_dwarf_bytecode_v4` on it. 
 
-![image](https://hackmd.io/_uploads/B1pc2MqMle.png)
+![image](2.png)
 
-![image](https://hackmd.io/_uploads/H1033f5Mex.png)
+![image](3.png)
 
 `execute_dwarf_bytecode_v4` will then go through the `.debug_line` section of the passed in elf byte-by-byte and perform various operations depending on various opcodes. Some of these were standard dwarf opcodes, but they also implemented two so-called "extended opcodes" denoted by bytes 0x51 and 0x52. Here are their implementations:
 
-![image](https://hackmd.io/_uploads/HyrPaGqGgl.png)
+![image](4.png)
 
 Extended opcode 0x51 will read in a byte and write it to the global flag buffer at a specified offset.
 
-![image](https://hackmd.io/_uploads/SkpcaM5Mgl.png)
+![image](5.png)
 
 Extended opcode 0x52 is a little more complicated, but essentially you specify two indexes of the flag buffer as well as an operator. It will then grab the two bytes at their indexes, perform some operation (addition, subtraction, multiplication, xor), and then check the result against a provided value. If this result is incorrect it will change the value of the flag_correct variable.
 
 Knowing this we can return to main to better understand it. In the `.debug_line` section the opcodes begin at an offset of 0x40. We can quickly see a lot of 0x51 and 0x52 opcodes.
 
-![image](https://hackmd.io/_uploads/S1z0CMcGge.png)
+![image](6.png)
 
 Here is an example 0x51 opcode. The first byte 0x00 signifies an extended opcode, the 0x3 specifies the length of the opcode, 0x51 is the opcode itself, the 0x00 signifies to offset into the flag buffer, and then the char 'd' will be written. This writes the first 'd' of the flag into the buffer.
 
-![image](https://hackmd.io/_uploads/ryUmJQqGxx.png)
+![image](7.png)
 
 Here is an example 0x52 opcode. We again have the signifier for extended opcode, length, opcode, index 1, index 2, operation, and the "correct" result.
 
@@ -53,11 +53,11 @@ Knowing this, `debualyzer` just became a standard constraint-solving problem. Fi
 
 So, we understand what `dwarf` does, but what about the provided server.py.
 
-![image](https://hackmd.io/_uploads/HJpwg75Gll.png)
+![image](8.png)
 
 In fact, it's extremely simple. It asks the user for a base64 encoded ELF and uses that as the argument into `dwarf` rather than the `main` binary we had for the rev.
 
-![image](https://hackmd.io/_uploads/SydsxQqGge.png)
+![image](9.png)
 
 The protections on the `dwarf` binary were almost everything enabled except for Partial RELRO.
 
@@ -67,7 +67,7 @@ My next step was to identify what kinds of bugs and primitives we have to work w
 
 Luckily, extended opcode 0x51 gives us a pretty obvious one byte write. In fact, the offset into the flag buffer can be negative and can reach quite far. This is a great write primitive, but with the protections enabled some leaks will probably be necessary. I spent lots of time trying to abuse the 0x52 opcode or other functionality in the binary, but opcode 0x51 is all we get! Let's see where we can write.
 
-![image](https://hackmd.io/_uploads/Hk0R-m9fxl.png)
+![image](10.png)
 
 Due to the flag buffer's position in the bss section there's not anything helpful to write ahead of it as we have no idea where the heap is. Behind it though, we do get access to the GOT table and some data variables. Writes into these alone will have to get us a shell somehow. Thankfully, Partial RELRO helps us a lot, but we still have no leaks.
 
@@ -77,11 +77,11 @@ Right, so because we're leakless we'll need to look into partial GOT overwrites.
 
 The simplest idea here is of course to call `system("/bin/sh")` or a one gadget. Unfortunately, after trying many, the one gadget constraints were too tight. Also, the distance between them and GOT functions was a bit far. My next goal was to see if we could get rdi control to write `"/bin/sh"` and get a consistent shell.
 
-![image](https://hackmd.io/_uploads/ByJQTm5Mxe.png)
+![image](11.png)
 
 Luckily, `puts` was an excellent candidate for this! `select_str` would return a pointer to either incorrect_msg or correct_msg, but it didn't really matter as both were located in the bss, so we could control them with our writes. Thus, if we changed `puts` to `system` and `"Flag is incorrect!"` to `"/bin/sh"` we could get a shell! But there was a big problem.
 
-![image](https://hackmd.io/_uploads/rJNcpQcGgl.png)
+![image](12.png)
 
 Without leaks we can only do partial overwrites which requires bruteforcing some nibbles of libc addresses. In this case, puts and system differ in their last 6 nibbles. The lowest 3 are fixed, but the remaining 3 will be affected by ASLR. This leaves us with a 16^3 = 1/4096 bruteforce. Although this is possible, it can be quite intense on remote servers. I asked the challenge authors and they said I should look for a solution with less bruteforce.
 
@@ -95,7 +95,7 @@ The official solution can be found [here](https://github.com/dicegang/dicectf-qu
 
 Overwriting `puts` was still my best lead, so I continued along this path. Maybe I can't use `system` or a one gadget, but what are our other options. One promising candidate I found was `gets`.
 
-![image](https://hackmd.io/_uploads/ryDVZVqzee.png)
+![image](13.png)
 
 Similar to `popen` mentioned earlier, `gets` and `puts` reside on the same page, so just one nibble of bruteforce is enough. The great thing about `gets` is that we get to stage some kind of additional payload or extra bytes. This might seem underwhelming, but for this challenge it's a huge help.
 
@@ -105,7 +105,7 @@ Up until now, we've had to do everything leakless. This results from the fact th
 
 To get leaks we will exploit the same `puts` call that prints our incorrect/correct message.
 
-![image](https://hackmd.io/_uploads/rJ35z45zxe.png)
+![image](14.png)
 
 The reason we can do this is because right after our messages in the bss are `stdout` and `stderr` libc pointers! All we need to do is overwrite the gap between the messages and these pointers for an easy leak.
 
@@ -117,7 +117,7 @@ So after putting it all together, our first `.debug_line` section uses the 0x51 
 
 Our `gets` call is great, but the only argument `puts` is ever called with is incorrect and correct msg. These are in the bss section and already accessible to write to with the 0x51 opcode, the only difference being that now we can write some libc pointers there. But where would they ever be used...
 
-![image](https://hackmd.io/_uploads/Bk2OSNqGgg.png)
+![image](15.png)
 
 Remember that `stderr` pointer in our controlled bss? Well it actually is used quite a few times in `main` when there are issues reading or parsing the elf. What if we could trigger one of these calls with a controlled `stderr` pointer and redirect `fprintf` or `fwrite` to something more desirable by overwriting their GOT entries?
 
@@ -127,36 +127,36 @@ I've become pretty fixated on our `puts` call, but in fact, there are 19 other G
 
 This is where our final tool comes into play, unresolved GOT entries. Before a GOT function is called for the first time in a program it points to a trampoline in the PLT like so:
 
-![image](https://hackmd.io/_uploads/ByrFP4cGle.png)
+![image](16.png)
 
 Once the function is called for the first time and resolved it will directly point to its address in libc. The great thing about the PLT is how many of these trampolines are so close to each other, sometimes completely eliminating a need for bruteforce. Finally, `main` is also close to the PLT!
 
-![image](https://hackmd.io/_uploads/B1IkOV9flg.png)
+![image](17.png)
 
 So, with just one nibble of bruteforce we can essentially point any unresolved GOT function to the PLT trampoline of ANY other function in the GOT or `main`. This opens up a very large number of possible exploit paths. I'm sure there were many ways to finish this, but here's the crazy path I came up with.
 
 ### Final exploit path
 
 1. The first `.debug_line` section of our base64 encoded ELF writes garbage bytes to fill up `correct_msg` up to the `stdout` pointer in the bss.
-![image](https://hackmd.io/_uploads/HyCQVOqzee.png)
+![image](18.png)
 2. The first `.debug_line` section ends returning to `main` and printing out a libc pointer.
-![image](https://hackmd.io/_uploads/SkA84_qfxl.png)
+![image](19.png)
 3. Our second `.debug_line` section performs 3 partial GOT overwrites. The first points `puts`->`gets`. This is a 1/16 bruteforce. The second points `fprintf`->`puts@plt`. The third points `elf_end`->`main+413`. These together are another 1/16 bruteforce as they lie in the same page. Here is the state of the GOT after overwrites:
-![image](https://hackmd.io/_uploads/H10PHuqGlx.png)
+![image](20.png)
 4. The second `.debug_line` section ends returning to `main` and calling `puts` on `correct_msg`. However, this actually calls `gets` letting us overwrite `stderr` with the first writable section of libc.
-![image](https://hackmd.io/_uploads/B1E2rOqGex.png)
+![image](21.png)
 ![image](https://hackmd.io/_uploads/HJNyL_cGll.png)
 5. `main` promptly calls the unresolved `elf_end` once all of our `.debug_line` sections have been parsed. However, this will actually jump to `main+413`.
-![image](https://hackmd.io/_uploads/HJsGL_5Gxl.png)
-![image](https://hackmd.io/_uploads/B1_QIu5Mlg.png)
+![image](22.png)
+![image](23.png)
 6. `main+413` loads the `stderr` pointer into rdi and executes the unresolved `fprintf` with our controlled address.
-![image](https://hackmd.io/_uploads/H1Bv8ucGle.png)
+![image](24.png)
 7. `fprintf` calls `puts@plt` which just calls its GOT entry which we already overwritten to point to `gets`.
-![image](https://hackmd.io/_uploads/HJShLdcMee.png)
+![image](25.png)
 8. We now have a `gets` call on an arbitrary libc address. There are many ways to reach code execution here, but I opted for pepsipu's setcontext32 gadget which is described [here](https://hackmd.io/@pepsipu/SyqPbk94a).
-![image](https://hackmd.io/_uploads/B1e0FOcGex.png)
+![image](26.png)
 10. Shell and flag!
-![image](https://hackmd.io/_uploads/r11xqucfge.png)
+![image](27.png)
 
 ### Conclusion
 
